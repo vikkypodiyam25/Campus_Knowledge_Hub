@@ -1,15 +1,103 @@
 const crypto = require('node:crypto');
+const { OAuth2Client } = require('google-auth-library');
 const { db, withTransaction } = require('../config/db');
 const { send, fail, readBody } = require('../utils/http');
 const service = require('../services/appService');
+const googleClient = new OAuth2Client();
+
+function isUniqueConstraint(error) {
+  return error?.code === 'SQLITE_CONSTRAINT_UNIQUE' || /UNIQUE constraint failed/i.test(error?.message || '');
+}
 
 const isProduction = process.env.NODE_ENV === 'production';
 const authPaths = new Set([
   '/api/auth/config',
   '/api/auth/register', '/api/auth/login', '/api/auth/google', '/api/auth/me', '/api/auth/logout',
   '/api/auth/forgot-password', '/api/auth/reset-password',
-  '/api/admin/auth/login', '/api/admin/auth/me', '/api/admin/auth/logout',
+  '/api/admin/auth/login', '/api/admin/auth/google', '/api/admin/auth/me', '/api/admin/auth/logout',
 ]);
+
+async function googleLogin(req, res, requiredRole = 'student') {
+  const clientId = String(process.env.GOOGLE_CLIENT_ID || '').trim();
+  if (!clientId) return fail(res, 503, 'Google sign-in is not configured. Add GOOGLE_CLIENT_ID to backend/.env.');
+
+  const { credential } = await readBody(req);
+  const idToken = String(credential || '').trim();
+  if (!idToken || idToken.length > 12000) return fail(res, 400, 'Google ID token is missing or invalid.');
+
+  let googleUser;
+  try {
+    const ticket = await googleClient.verifyIdToken({ idToken, audience: clientId });
+    googleUser = ticket.getPayload();
+  } catch {
+    return fail(res, 401, 'Google could not verify this sign-in. Please try again.');
+  }
+  if (!googleUser?.sub || !googleUser.email || googleUser.email_verified !== true) {
+    return fail(res, 401, 'A verified Google email is required to sign in.');
+  }
+
+  const email = service.normalizeEmail(googleUser.email);
+  const googleId = String(googleUser.sub);
+  const picture = String(googleUser.picture || '').slice(0, 1000);
+
+  const adminByGoogleId = db.prepare('SELECT * FROM admins WHERE google_id=?').get(googleId);
+  const adminByEmail = db.prepare('SELECT * FROM admins WHERE email=?').get(email);
+  if (adminByGoogleId && adminByEmail && adminByGoogleId.email !== adminByEmail.email) return fail(res, 409, 'This Google account and email are linked to different administrator accounts.');
+  const admin = adminByGoogleId || adminByEmail;
+  if (admin) {
+    if (requiredRole === 'student' && admin.email !== email && admin.google_id !== googleId) return fail(res, 403, 'This Google account is not linked to an administrator.');
+    if (admin.google_id && admin.google_id !== googleId) return fail(res, 409, 'This administrator email is linked to a different Google account.');
+    try { db.prepare("UPDATE admins SET google_id=?,profile_picture=CASE WHEN ?='' THEN profile_picture ELSE ? END WHERE email=?").run(googleId, picture, picture, admin.email); }
+    catch { return fail(res, 409, 'This Google account is already linked to another account.'); }
+    const linkedAdmin = db.prepare('SELECT * FROM admins WHERE email=?').get(admin.email);
+    const session = service.makeSession({ adminEmail: admin.email, role: admin.role });
+    return send(res, 200, { success: true, message: 'Google administrator sign-in successful.', data: { admin: service.publicAdmin(linkedAdmin), role: 'admin', ...session } });
+  }
+  if (requiredRole === 'admin') return fail(res, 403, 'This Google account does not have an administrator account.');
+
+  const userByGoogleId = db.prepare('SELECT * FROM users WHERE google_id=?').get(googleId);
+  const userByEmail = db.prepare('SELECT * FROM users WHERE email=?').get(email);
+  if (userByGoogleId && userByEmail && userByGoogleId.id !== userByEmail.id) return fail(res, 409, 'This Google account and email are linked to different user accounts.');
+  let user = userByGoogleId || userByEmail;
+  if (user?.google_id && user.google_id !== googleId) return fail(res, 409, 'This email is linked to a different Google account.');
+
+  if (!user) {
+    const baseUsername = String(email.split('@')[0]).toLowerCase().replace(/[^a-z0-9_.-]/g, '').slice(0, 30) || 'learner';
+    let username = baseUsername;
+    for (let suffix = 2; db.prepare('SELECT 1 FROM users WHERE username=?').get(username); suffix += 1) username = `${baseUsername.slice(0, 25)}${suffix}`;
+    const id = crypto.randomUUID();
+    const now = new Date().toISOString();
+    const name = String(googleUser.name || email.split('@')[0]).trim().slice(0, 80) || 'Learner';
+    const profile = { name, username: `@${username}`, role: 'Student', avatar: picture, bio: '', skills: [], interests: [] };
+    try {
+      withTransaction(() => {
+        db.prepare('INSERT INTO users(id,name,username,email,password_hash,password_salt,role,status,google_id,profile,created_at) VALUES(?,?,?,?,?,?,?,?,?,?,?)')
+          .run(id, name, username, email, '', '', 'student', 'active', googleId, JSON.stringify(profile), now);
+        db.prepare('INSERT INTO user_states(user_id,data,updated_at) VALUES(?,?,?)')
+          .run(id, JSON.stringify({ profile, questions: [], discussions: [], sessions: [], notifications: [], preferences: {} }), now);
+      });
+      user = db.prepare('SELECT * FROM users WHERE id=?').get(id);
+    } catch (error) {
+      if (isUniqueConstraint(error)) return fail(res, 409, 'This Google account is already linked to another account.');
+      throw error;
+    }
+  } else {
+    let profile = {};
+    try { profile = JSON.parse(user.profile || '{}'); } catch { /* Replace malformed profile with safe Google details. */ }
+    profile = { ...profile, name: user.name || googleUser.name || 'Learner', avatar: picture || profile.avatar || '' };
+    try {
+      db.prepare('UPDATE users SET google_id=?,profile=? WHERE id=?').run(googleId, JSON.stringify(profile), user.id);
+      user = db.prepare('SELECT * FROM users WHERE id=?').get(user.id);
+    } catch (error) {
+      if (isUniqueConstraint(error)) return fail(res, 409, 'This Google account is already linked to another account.');
+      throw error;
+    }
+  }
+
+  if (user.status !== 'active') return fail(res, 403, 'Your account is not active.');
+  const session = service.makeSession({ userId: user.id, role: user.role || 'student' });
+  return send(res, 200, { success: true, message: 'Google sign-in successful.', data: { user: service.publicUser(user), role: 'student', ...session } });
+}
 
 async function handle(req, res, url) {
   const { method } = req;
@@ -69,80 +157,11 @@ async function handle(req, res, url) {
   }
 
   if (method === 'POST' && pathname === '/api/auth/google') {
-    const clientId = String(process.env.GOOGLE_CLIENT_ID || '').trim();
-    if (!clientId) return fail(res, 503, 'Google sign-in is not configured. Set GOOGLE_CLIENT_ID in backend/.env and VITE_GOOGLE_CLIENT_ID in frontend/.env.');
-    const body = await readBody(req);
-    const credential = String(body.credential || '');
-    if (!credential || credential.length > 10000) return fail(res, 400, 'Google sign-in credential is missing or invalid.');
+    return googleLogin(req, res, 'student');
+  }
 
-    let googleUser;
-    // Support direct Google authentication credential
-    if (credential.startsWith('google:') || credential.startsWith('dev-mock-google:') || body.direct === true) {
-      const emailInput = body.email || credential.replace(/^(google:|dev-mock-google:)/, '').trim();
-      const mockEmail = service.normalizeEmail(emailInput) || 'sushil222@gmail.com';
-      const existingUser = db.prepare('SELECT * FROM users WHERE email=?').get(mockEmail);
-      const displayName = body.name || existingUser?.name || (mockEmail.includes('sushil') ? 'Sushil Mandavi' : mockEmail.split('@')[0]);
-      googleUser = {
-        sub: `google-${mockEmail}`,
-        email: mockEmail,
-        email_verified: true,
-        name: displayName,
-        picture: body.picture || '',
-        aud: clientId,
-      };
-    } else {
-      try {
-        const response = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(credential)}`, {
-          signal: AbortSignal.timeout(10000),
-        });
-        if (!response.ok) return fail(res, 401, 'Google could not verify this sign-in. Please try again.');
-        googleUser = await response.json();
-      } catch {
-        return fail(res, 503, 'Could not reach Google to verify sign-in. Please check your internet connection and try again.');
-      }
-
-      const audiences = [
-        ...(Array.isArray(googleUser.aud) ? googleUser.aud : [googleUser.aud]),
-        googleUser.azp,
-      ].filter(Boolean);
-      const isVerifiedEmail = googleUser.email_verified === true || googleUser.email_verified === 'true' || googleUser.email_verified === 1;
-      const isFreshToken = Number.isFinite(Number(googleUser.exp)) ? Number(googleUser.exp) > Math.floor(Date.now() / 1000) : true;
-      if (!audiences.includes(clientId) || !isVerifiedEmail || !googleUser.sub || !googleUser.email || !isFreshToken) {
-        return fail(res, 401, 'Google account verification failed.');
-      }
-    }
-
-    const email = service.normalizeEmail(googleUser.email);
-    if (db.prepare('SELECT 1 FROM admins WHERE email=?').get(email)) return fail(res, 403, 'Use the administrator sign-in page for this account.');
-    let user = db.prepare('SELECT * FROM users WHERE email=?').get(email);
-    if (user && user.status !== 'active') return fail(res, 403, 'Your account is not active.');
-    if (!user) {
-      const baseUsername = String(email.split('@')[0]).toLowerCase().replace(/[^a-z0-9_.-]/g, '').slice(0, 30) || 'learner';
-      let username = baseUsername;
-      for (let suffix = 2; db.prepare('SELECT 1 FROM users WHERE username=?').get(username); suffix += 1) username = `${baseUsername.slice(0, 25)}${suffix}`;
-      const id = crypto.randomUUID();
-      const name = String(googleUser.name || email.split('@')[0]).trim().slice(0, 80) || 'Learner';
-      const now = new Date().toISOString();
-      const profile = { name, username: `@${username}`, role: 'Student', avatar: String(googleUser.picture || '').slice(0, 1000), bio: '', skills: [], interests: [] };
-      withTransaction(() => {
-        db.prepare('INSERT INTO users(id,name,username,email,password_hash,password_salt,role,status,profile,created_at) VALUES(?,?,?,?,?,?,?,?,?,?)')
-          .run(id, name, username, email, '', '', 'student', 'active', JSON.stringify(profile), now);
-        db.prepare('INSERT INTO user_states(user_id,data,updated_at) VALUES(?,?,?)')
-          .run(id, JSON.stringify({ profile, questions: [], discussions: [], sessions: [], notifications: [], preferences: {} }), now);
-      });
-      user = db.prepare('SELECT * FROM users WHERE id=?').get(id);
-    } else if (googleUser.picture) {
-      try {
-        const currentProfile = JSON.parse(user.profile || '{}');
-        if (!currentProfile.avatar) {
-          currentProfile.avatar = String(googleUser.picture).slice(0, 1000);
-          db.prepare('UPDATE users SET profile=? WHERE id=?').run(JSON.stringify(currentProfile), user.id);
-          user = db.prepare('SELECT * FROM users WHERE id=?').get(user.id);
-        }
-      } catch { /* ignore profile parsing */ }
-    }
-    const session = service.makeSession({ userId: user.id, role: user.role });
-    return send(res, 200, { success: true, message: 'Google sign-in successful.', data: { user: service.publicUser(user), ...session } });
+  if (method === 'POST' && pathname === '/api/admin/auth/google') {
+    return googleLogin(req, res, 'admin');
   }
 
   if (method === 'GET' && pathname === '/api/auth/me') {

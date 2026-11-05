@@ -14,6 +14,7 @@ async function handle(req, res, url) {
     '/api/admin/questions': ['Super Admin', 'Admin', 'Moderator'],
     '/api/admin/discussions': ['Super Admin', 'Admin', 'Moderator'],
     '/api/admin/sessions': ['Super Admin', 'Admin'],
+    '/api/admin/assignment-submissions': ['Super Admin', 'Admin', 'Moderator'],
     '/api/admin/storage': ['Super Admin', 'Admin'],
   };
   let required = allowedRoles[url.pathname];
@@ -21,9 +22,40 @@ async function handle(req, res, url) {
   if (!required && url.pathname.startsWith('/api/admin/discussions/')) required = allowedRoles['/api/admin/discussions'];
   if (!required && url.pathname.startsWith('/api/admin/sessions/')) required = allowedRoles['/api/admin/sessions'];
   if (!required && url.pathname.startsWith('/api/admin/users/')) required = allowedRoles['/api/admin/users'];
+  if (!required && url.pathname.startsWith('/api/admin/assignment-submissions/')) required = allowedRoles['/api/admin/assignment-submissions'];
   if (required && !required.includes(role)) return fail(res, 403, 'Your administrator role cannot perform this action.');
 
   if (url.pathname.startsWith('/api/admin/storage') && !['Super Admin', 'Admin'].includes(role)) return fail(res, 403, 'Your administrator role cannot access platform storage.');
+  if (req.method === 'GET' && url.pathname === '/api/admin/assignment-submissions') {
+    const rows = db.prepare(`SELECT s.id, s.user_id AS userId, u.name AS studentName, u.email AS studentEmail,
+      s.school_code AS schoolCode, s.assignment_id AS assignmentId, s.assignment_title AS assignmentTitle,
+      s.module_name AS moduleName, s.submission_text AS submissionText, s.submission_url AS submissionUrl,
+      s.status, s.admin_feedback AS adminFeedback, s.score, s.submitted_at AS submittedAt
+      FROM assignment_submissions s JOIN users u ON u.id=s.user_id ORDER BY s.submitted_at DESC`).all();
+    return send(res, 200, { success: true, data: rows });
+  }
+  const assignmentSubmissionMatch = url.pathname.match(/^\/api\/admin\/assignment-submissions\/([^/]+)$/);
+  if (req.method === 'PUT' && assignmentSubmissionMatch) {
+    const id = decodeURIComponent(assignmentSubmissionMatch[1]);
+    const body = await readBody(req);
+    const current = db.prepare('SELECT id FROM assignment_submissions WHERE id=?').get(id);
+    if (!current) return fail(res, 404, 'Assignment submission not found.');
+    const statuses = ['Submitted', 'In Review', 'Needs Revision', 'Graded'];
+    const status = statuses.includes(body.status) ? body.status : null;
+    const feedback = String(body.adminFeedback ?? '').trim();
+    const score = body.score === '' || body.score === null || body.score === undefined ? null : Number(body.score);
+    if (!status) return fail(res, 400, 'Choose a valid submission status.');
+    if (feedback.length > 3000) return fail(res, 400, 'Feedback must be 3,000 characters or fewer.');
+    if (score !== null && (!Number.isInteger(score) || score < 0 || score > 100)) return fail(res, 400, 'Score must be a whole number from 0 to 100.');
+    db.prepare('UPDATE assignment_submissions SET status=?,admin_feedback=?,score=? WHERE id=?').run(status, feedback, score, id);
+    const updated = db.prepare(`SELECT s.id,s.user_id AS userId,u.name AS studentName,u.email AS studentEmail,s.school_code AS schoolCode,s.assignment_id AS assignmentId,s.assignment_title AS assignmentTitle,s.module_name AS moduleName,s.submission_text AS submissionText,s.submission_url AS submissionUrl,s.status,s.admin_feedback AS adminFeedback,s.score,s.submitted_at AS submittedAt FROM assignment_submissions s JOIN users u ON u.id=s.user_id WHERE s.id=?`).get(id);
+    const studentState = service.readUserState(updated.userId);
+    if (studentState.preferences?.assignmentUpdates !== false) {
+      studentState.notifications = [{ id: `assignment_${Date.now()}`, title: `Assignment ${status.toLowerCase()}`, detail: `${updated.assignmentTitle}${score === null ? '' : ` · Score ${score}/100`}${feedback ? ` · ${feedback}` : ''}`, time: 'Just now', read: false, icon: 'assignment' }, ...(studentState.notifications || [])].slice(0, 100);
+      service.persistUserState(updated.userId, studentState);
+    }
+    return send(res, 200, { success: true, message: 'Submission review saved.', data: updated });
+  }
   if (req.method === 'GET' && url.pathname === '/api/admin/dashboard') {
       const users = db.prepare("SELECT id,name,username,email,role,status,profile,created_at FROM users ORDER BY created_at DESC").all().map(user => {
       let profile = {}; try { profile = JSON.parse(user.profile || '{}'); } catch {}

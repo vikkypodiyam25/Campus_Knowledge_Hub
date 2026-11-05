@@ -34,6 +34,12 @@ export const SIDEBAR_ITEMS = [
     permission: PERMISSIONS.MANAGE_SESSIONS,
   },
   {
+    label: 'Assignment Submissions',
+    path: '/admin/assignments',
+    icon: 'ClipboardList',
+    permission: PERMISSIONS.VIEW_USERS,
+  },
+  {
     label: 'Reports & Moderation',
     path: '/admin/reports',
     icon: 'ShieldAlert',

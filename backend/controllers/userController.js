@@ -1,13 +1,112 @@
 const { send, fail, readBody } = require('../utils/http');
+const { db } = require('../config/db');
 const service = require('../services/appService');
+const SCHOOL_IDS = { SOP: 'programming', SOB: 'business', SOF: 'finance' };
+let curriculumPromise;
+function loadCurricula() {
+  if (!curriculumPromise) {
+    const { pathToFileURL } = require('node:url');
+    const path = require('node:path');
+    curriculumPromise = import(pathToFileURL(path.resolve(__dirname, '../../frontend/src/data/curricula.js')).href);
+  }
+  return curriculumPromise;
+}
 
 function matches(pathname) {
-  return pathname === '/api/state' || pathname === '/api/state/actions';
+  return pathname === '/api/state' || pathname === '/api/state/actions'
+    || pathname === '/api/schools' || pathname === '/api/schools/select'
+    || /^\/api\/schools\/[A-Z]+$/.test(pathname) || /^\/api\/curriculum\/[A-Z]+$/.test(pathname)
+    || pathname === '/api/progress' || pathname === '/api/assignments/submissions';
 }
 
 async function handle(req, res, url) {
   const auth = service.requireSession(req, 'user');
   if (!auth) return fail(res, 401, 'Please sign in to continue.');
+
+  if (req.method === 'GET' && url.pathname === '/api/schools') {
+    const { CURRICULA } = await loadCurricula();
+    return send(res, 200, { success: true, data: Object.values(CURRICULA).filter(item => item.code).map(({ code, id, name, shortName, description, accent }) => ({ code, id, name, shortName, description, accent })) });
+  }
+  const schoolMatch = url.pathname.match(/^\/api\/schools\/([A-Z]+)$/);
+  if (req.method === 'GET' && schoolMatch) {
+    const id = SCHOOL_IDS[schoolMatch[1]];
+    if (!id) return fail(res, 404, 'School not found.');
+    const { CURRICULA } = await loadCurricula();
+    const { curriculum, ...school } = CURRICULA[id];
+    return send(res, 200, { success: true, data: school });
+  }
+  if (req.method === 'POST' && url.pathname === '/api/schools/select') {
+    const body = await readBody(req);
+    const code = String(body.schoolCode || '').toUpperCase();
+    const schoolId = SCHOOL_IDS[code];
+    if (!schoolId) return fail(res, 400, 'Choose SOP, SOB or SOF.');
+    const state = service.readUserState(auth.session.user_id);
+    const selectedAt = new Date().toISOString();
+    service.persistUserState(auth.session.user_id, { ...state, profile: { ...(state.profile || {}), subject: schoolId, selectedSchool: code, selectedSchoolId: schoolId, schoolSelectedAt: selectedAt } });
+    return send(res, 200, { success: true, message: 'School selection saved.', data: { schoolCode: code, schoolId, selectedAt } });
+  }
+  const curriculumMatch = url.pathname.match(/^\/api\/curriculum\/([A-Z]+)$/);
+  if (req.method === 'GET' && curriculumMatch) {
+    const code = curriculumMatch[1];
+    const schoolId = SCHOOL_IDS[code];
+    if (!schoolId) return fail(res, 404, 'School curriculum not found.');
+    const state = service.readUserState(auth.session.user_id);
+    if (state.profile?.selectedSchool !== code && state.profile?.subject !== schoolId) return fail(res, 403, 'Select this school before viewing its curriculum.');
+    const { CURRICULA } = await loadCurricula();
+    return send(res, 200, { success: true, data: CURRICULA[schoolId] });
+  }
+  if (url.pathname === '/api/progress') {
+    if (req.method === 'GET') {
+      const rows = db.prepare('SELECT school_code AS schoolCode, module_id AS moduleId, topic_id AS topicId, status, completed_at AS completedAt FROM student_progress WHERE user_id=?').all(auth.session.user_id);
+      return send(res, 200, { success: true, data: rows });
+    }
+    if (req.method === 'POST') {
+      const body = await readBody(req);
+      const code = String(body.schoolCode || '').toUpperCase();
+      if (!SCHOOL_IDS[code] || !body.moduleId || !body.topicId) return fail(res, 400, 'A valid school, module and topic are required.');
+      const profile = service.readUserState(auth.session.user_id).profile || {};
+      if (profile.selectedSchool !== code && profile.subject !== SCHOOL_IDS[code]) return fail(res, 403, 'You can update progress only for your selected school.');
+      const completedAt = new Date().toISOString();
+      const status = body.status === 'not_started' ? 'not_started' : 'completed';
+      db.prepare('INSERT INTO student_progress(user_id,school_code,module_id,topic_id,status,completed_at) VALUES(?,?,?,?,?,?) ON CONFLICT(user_id,school_code,module_id,topic_id) DO UPDATE SET status=excluded.status,completed_at=excluded.completed_at').run(auth.session.user_id, code, String(body.moduleId), String(body.topicId), status, completedAt);
+      return send(res, 200, { success: true, message: 'Progress saved.', data: { schoolCode: code, moduleId: String(body.moduleId), topicId: String(body.topicId), status, completedAt } });
+    }
+  }
+
+  if (url.pathname === '/api/assignments/submissions') {
+    if (req.method === 'GET') {
+      const rows = db.prepare('SELECT id, school_code AS schoolCode, assignment_id AS assignmentId, assignment_title AS assignmentTitle, module_name AS moduleName, submission_text AS submissionText, submission_url AS submissionUrl, status, admin_feedback AS adminFeedback, score, submitted_at AS submittedAt FROM assignment_submissions WHERE user_id=? ORDER BY submitted_at DESC').all(auth.session.user_id);
+      return send(res, 200, { success: true, data: rows });
+    }
+    if (req.method === 'POST') {
+      const body = await readBody(req);
+      const code = String(body.schoolCode || '').toUpperCase();
+      const schoolId = SCHOOL_IDS[code];
+      const moduleId = String(body.moduleId || '').trim();
+      const submissionText = String(body.submissionText || '').trim();
+      const submissionUrl = String(body.submissionUrl || '').trim();
+      if (!schoolId || !moduleId || !submissionText || submissionText.length > 10000) return fail(res, 400, 'Write your assignment response (1–10,000 characters).');
+      const profile = service.readUserState(auth.session.user_id).profile || {};
+      if (profile.subject !== schoolId && profile.selectedSchool !== code) return fail(res, 403, 'Submit assignments only for your selected school.');
+      if (submissionUrl) {
+        try { if (!['http:', 'https:'].includes(new URL(submissionUrl).protocol)) throw new Error(); }
+        catch { return fail(res, 400, 'Submission link must be a valid http or https URL.'); }
+      }
+      const { CURRICULA } = await loadCurricula();
+      const curriculum = CURRICULA[schoolId];
+      const modules = [...(curriculum.modules || []), ...(curriculum.subjects || []).flatMap(subject => (subject.modules || []).map(module => ({ ...module, subjectName: subject.name })))];
+      const module = modules.find(item => item.id === moduleId);
+      if (!module?.assignment) return fail(res, 404, 'Assignment not found for this school.');
+      const submittedAt = new Date().toISOString();
+      const id = `${auth.session.user_id}:${moduleId}`;
+      db.prepare(`INSERT INTO assignment_submissions(id,user_id,school_code,assignment_id,assignment_title,module_name,submission_text,submission_url,status,admin_feedback,score,submitted_at)
+        VALUES(?,?,?,?,?,?,?,?,'Submitted','',NULL,?)
+        ON CONFLICT(user_id,assignment_id) DO UPDATE SET submission_text=excluded.submission_text,submission_url=excluded.submission_url,status='Submitted',admin_feedback='',score=NULL,submitted_at=excluded.submitted_at`)
+        .run(id, auth.session.user_id, code, moduleId, module.assignment.title, module.name, submissionText, submissionUrl, submittedAt);
+      const saved = db.prepare('SELECT id, school_code AS schoolCode, assignment_id AS assignmentId, assignment_title AS assignmentTitle, module_name AS moduleName, submission_text AS submissionText, submission_url AS submissionUrl, status, admin_feedback AS adminFeedback, score, submitted_at AS submittedAt FROM assignment_submissions WHERE user_id=? AND assignment_id=?').get(auth.session.user_id, moduleId);
+      return send(res, 201, { success: true, message: 'Assignment submitted.', data: saved });
+    }
+  }
 
   if (req.method === 'GET' && url.pathname === '/api/state') {
     return send(res, 200, { success: true, data: service.getUserDashboardState(auth.session.user_id) });

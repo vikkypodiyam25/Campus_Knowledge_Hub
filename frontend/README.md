@@ -14,6 +14,8 @@ This starts the backend API and frontend together on the **same port**. Open the
 
 User login is at `/login`; admin login is at `/admin/login`. Configure `ADMIN_EMAIL`, `ADMIN_NAME`, and a strong `ADMIN_PASSWORD` in `backend/.env` to provision the administrator account. No default admin credentials are created.
 
+For Google login, copy `frontend/.env.example` to `frontend/.env` and set `VITE_GOOGLE_CLIENT_ID` to the Google OAuth Web application client ID. `VITE_API_URL` defaults to `/api` for the same-origin backend; set it to the deployed API base URL only when frontend and backend are hosted separately. Keep the same client ID in `backend/.env` as `GOOGLE_CLIENT_ID`.
+
 ## Data and production preview
 
 The database is created at `backend/data/learnconnect.sqlite` and survives server restarts. It is ignored by Git. User passwords are scrypt-hashed; sessions, user state, admin data and audit-style content sync are stored server-side. Authenticated user actions (create posts/sessions, replies, votes, bookmarks, profile/preferences and notifications) are validated and applied by `POST /api/state/actions` before SQLite is updated. The browser keeps only a local display cache.

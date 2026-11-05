@@ -29,7 +29,7 @@ export const OverviewChart = ({ growthData = [], distributionData = [], weeklyDa
               Platform Engagement & Growth
             </h3>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-              Analytics will appear as platform activity is recorded.
+              {hasAnalytics ? 'Recorded student activity across the learning community.' : 'Analytics will appear as platform activity is recorded.'}
             </p>
           </div>
 

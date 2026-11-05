@@ -26,7 +26,7 @@ const seed = {
     { id: 4, title: 'A new React session is available', detail: 'React Hooks: from basics to patterns · Today at 6:30 PM', time: 'Yesterday', read: true, icon: 'calendar' },
     { id: 5, title: 'You have a new reply', detail: 'Join the CSS Grid vs Flexbox conversation.', time: '2 days ago', read: true, icon: 'message' }
   ],
-  preferences: { email: true, answers: true, sessions: false, dark: false }
+  preferences: { email: true, answers: true, sessions: false, assignmentUpdates: true, studyReminders: false, dark: false, reducedMotion: false }
 };
 
 export const INITIAL_APP_STATE = seed;
@@ -34,6 +34,10 @@ const readStore = () => { try { const saved = JSON.parse(localStorage.getItem('l
 function readUserSession() {
   try { return JSON.parse(localStorage.getItem('learnconnect-user-session') || sessionStorage.getItem('learnconnect-user-session') || 'null'); }
   catch { return null; }
+}
+function readSelectedSubject(userId) {
+  try { return localStorage.getItem(`learnconnect-subject-${userId}`) || ''; }
+  catch { return ''; }
 }
 const Store = createContext(null);
 export function AppProvider({ children }) {
@@ -53,7 +57,7 @@ export function AppProvider({ children }) {
       const stateResult = await api.get('/state');
       if (!active) return;
       const loadedState = { ...structuredClone(seed), ...(stateResult.data || {}) };
-      loadedState.profile = { ...result.data.user.profile, name: result.data.user.name, username: result.data.user.profile?.username || `@${result.data.user.username}`, role: 'Student' };
+      loadedState.profile = { ...result.data.user.profile, subject: result.data.user.profile?.subject || readSelectedSubject(result.data.user.id), name: result.data.user.name, username: result.data.user.profile?.username || `@${result.data.user.username}`, role: 'Student' };
       loadedState.preferences = { ...seed.preferences, ...(stateResult.data?.preferences || {}) };
       setData(loadedState);
       setAuth({ status: 'authenticated', user: result.data.user, token: session.token });
@@ -73,7 +77,7 @@ export function AppProvider({ children }) {
       refreshing = true;
       try {
         const response = await api.get('/state');
-        if (active) setData(current => ({ ...current, questions: response.data.questions || [], discussions: response.data.discussions || [], sessions: response.data.sessions || [], categories: response.data.categories || [] }));
+        if (active) setData(current => ({ ...current, questions: response.data.questions || [], discussions: response.data.discussions || [], sessions: response.data.sessions || [], notifications: response.data.notifications || current.notifications, categories: response.data.categories || [] }));
       } catch { /* Keep the last loaded dashboard data while the API is temporarily unavailable. */ }
       finally { refreshing = false; }
     };
@@ -83,6 +87,7 @@ export function AppProvider({ children }) {
   }, [auth.status]);
   useEffect(() => {
     document.documentElement.dataset.theme = data.preferences.dark ? 'dark' : 'light';
+    document.documentElement.dataset.motion = data.preferences.reducedMotion ? 'reduce' : 'full';
     if (!dataReady) return;
     localStorage.setItem('learnconnect-v1', JSON.stringify(data));
   }, [data, dataReady]);
@@ -90,6 +95,10 @@ export function AppProvider({ children }) {
   const mutate = async (collection, action, values = {}) => {
     const response = await api.post('/state/actions', { collection, action, ...values });
     const next = { ...structuredClone(seed), ...response.data };
+    if (collection === 'profile' && action === 'updateProfile' && values.payload) {
+      next.profile = { ...next.profile, ...values.payload };
+      if (values.payload.subject && auth.user?.id) localStorage.setItem(`learnconnect-subject-${auth.user.id}`, values.payload.subject);
+    }
     setData(next);
     localStorage.setItem('learnconnect-v1', JSON.stringify(next));
     return response.result;
@@ -98,7 +107,7 @@ export function AppProvider({ children }) {
     setDataReady(false);
     const stateResult = await api.get('/state');
     const loadedState = { ...structuredClone(seed), ...(stateResult.data || {}) };
-    loadedState.profile = { ...session.user.profile, name: session.user.name, username: session.user.profile?.username || `@${session.user.username}`, role: 'Student' };
+    loadedState.profile = { ...session.user.profile, subject: session.user.profile?.subject || readSelectedSubject(session.user.id), name: session.user.name, username: session.user.profile?.username || `@${session.user.username}`, role: 'Student' };
     loadedState.preferences = { ...seed.preferences, ...(stateResult.data?.preferences || {}) };
     setData(loadedState);
     setAuth({ status: 'authenticated', user: session.user, token: session.token });

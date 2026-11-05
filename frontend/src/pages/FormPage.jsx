@@ -3,16 +3,18 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, CalendarDays, Check, CircleHelp, MessageSquare, Plus } from 'lucide-react';
 import { useApp } from '../state.jsx';
 import { Button, PageHead, cats } from '../components/common/index.jsx';
+import { getCurriculum } from '../data/curricula.js';
 
 export default function FormPage({ type }) {
   const { data, mutate, notify } = useApp();
-  const categories = [...new Set([...(data.categories?.length ? data.categories : cats.slice(1)), 'Community', 'Learning'])];
+  const curriculum = getCurriculum(data.profile?.subject);
+  const categories = [...new Set([...(curriculum?.categories || (data.categories?.length ? data.categories : cats.slice(1))), 'Community', 'Learning'])];
   const go = useNavigate();
   const isQuestion = type === 'question';
   const isSession = type === 'session';
   const isLearning = type === 'learning';
   const title = isQuestion ? 'Ask a doubt' : isSession ? 'Create a live session' : isLearning ? 'Share what you learned' : 'Start a discussion';
-  const [form, setForm] = useState({ title: '', description: '', category: isQuestion ? 'React' : isSession ? 'JavaScript' : isLearning ? 'Learning' : 'Community', tags: '', date: '', time: '', duration: '60', link: 'https://meet.google.com/abc-defg-hij' });
+  const [form, setForm] = useState({ title: '', description: '', category: isQuestion ? (curriculum?.categories[0] || 'React') : isSession ? (curriculum?.categories[1] || 'JavaScript') : isLearning ? 'Learning' : 'Community', tags: '', date: '', time: '', duration: '60', link: '' });
   const set = (key, value) => setForm(current => ({ ...current, [key]: value }));
 
   async function submit(event) {

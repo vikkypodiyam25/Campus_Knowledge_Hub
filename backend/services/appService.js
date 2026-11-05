@@ -1,6 +1,7 @@
 ﻿const crypto = require('node:crypto');
 const { promisify } = require('node:util');
 const { db, withTransaction } = require('../config/db');
+const jwt = require('jsonwebtoken');
 
 const scrypt = promisify(crypto.scrypt);
 
@@ -26,12 +27,16 @@ function publicUser(user) {
 }
 
 function publicAdmin(admin) {
-  return { id: admin.email, name: admin.name, email: admin.email, role: admin.role, title: `${admin.role} Â· LearnConnect`, platform: 'LearnConnect' };
+  return { id: admin.email, name: admin.name, email: admin.email, role: admin.role, avatar: admin.profile_picture || '', title: `${admin.role} Â· LearnConnect`, platform: 'LearnConnect' };
 }
 
 function makeSession({ userId = null, adminEmail = null, role }) {
-  const token = crypto.randomBytes(32).toString('base64url');
+  const secret = String(process.env.JWT_SECRET || '');
+  if (secret.length < 32) throw Object.assign(new Error('Set a random JWT_SECRET of at least 32 characters in backend/.env.'), { status: 500 });
   const expiresAt = Date.now() + 7 * 24 * 60 * 60 * 1000;
+  const token = jwt.sign({ sub: userId || adminEmail, userId, adminEmail, role }, secret, {
+    expiresIn: '7d', issuer: 'campus-knowledge-hub', audience: 'campus-knowledge-hub-api',
+  });
   db.prepare('INSERT INTO sessions(token_hash,user_id,admin_email,role,expires_at) VALUES(?,?,?,?,?)')
     .run(digest(token), userId, adminEmail, role, expiresAt);
   return { token, expiresAt: new Date(expiresAt).toISOString() };
@@ -45,6 +50,12 @@ function requireSession(req, expectedRole) {
   if (!session || session.expires_at < Date.now()) {
     if (session) db.prepare('DELETE FROM sessions WHERE token_hash=?').run(session.token_hash);
     return null;
+  }
+  try {
+    const claims = jwt.verify(token, process.env.JWT_SECRET, { issuer: 'campus-knowledge-hub', audience: 'campus-knowledge-hub-api' });
+    if (claims.role !== session.role || claims.userId !== (session.user_id || null) || claims.adminEmail !== (session.admin_email || null)) return null;
+  } catch {
+    if (token.split('.').length === 3) return null;
   }
   if (expectedRole === 'user' && (!session.user_id || session.user_status !== 'active')) return null;
   if (expectedRole === 'admin' && (!session.admin_email || !session.admin_name)) return null;
@@ -252,13 +263,14 @@ function applyUserAction(user, state, body) {
   }
 
   if (action === 'updateProfile' && collection === 'profile') {
-    const allowed = ['name', 'username', 'bio', 'skills', 'interests', 'github', 'linkedin'];
+    const allowed = ['name', 'username', 'bio', 'skills', 'interests', 'github', 'linkedin', 'subject'];
+    if (payload.subject !== undefined && !['programming', 'school', 'business', 'finance'].includes(payload.subject)) throw Object.assign(new Error('Choose a valid learning school.'), { status: 400 });
     for (const key of allowed) if (payload[key] !== undefined) state.profile[key] = payload[key];
     state.profile.role = 'Student';
     return state.profile;
   }
   if (action === 'updatePreferences' && collection === 'preferences') {
-    for (const key of ['email', 'answers', 'sessions', 'dark']) if (payload[key] !== undefined) state.preferences[key] = Boolean(payload[key]);
+    for (const key of ['email', 'answers', 'sessions', 'assignmentUpdates', 'studyReminders', 'dark', 'reducedMotion']) if (payload[key] !== undefined) state.preferences[key] = Boolean(payload[key]);
     return state.preferences;
   }
   if (action === 'markAllRead' && collection === 'notifications') {

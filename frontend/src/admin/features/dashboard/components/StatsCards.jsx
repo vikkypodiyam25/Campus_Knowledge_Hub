@@ -6,7 +6,6 @@ import {
   MessageSquare,
   Video,
   ShieldAlert,
-  TrendingUp,
 } from 'lucide-react';
 import { formatNumber } from '../../../utils/formatNumber';
 
@@ -15,7 +14,7 @@ export const StatsCards = ({ stats }) => {
     {
       title: 'Total Registered Students',
       value: stats.totalStudents,
-      change: 'Current total',
+      change: 'All accounts',
       period: 'registered accounts',
       icon: Users,
       color: 'indigo',
@@ -25,7 +24,7 @@ export const StatsCards = ({ stats }) => {
     {
       title: 'Active Students',
       value: stats.activeStudents,
-      change: 'Current total',
+      change: 'Active accounts',
       period: 'active accounts',
       icon: UserCheck,
       color: 'emerald',
@@ -98,7 +97,6 @@ export const StatsCards = ({ stats }) => {
               </span>
               <div className="mt-1 flex items-center gap-1.5 text-[11px]">
                 <span className="font-semibold text-slate-500 dark:text-slate-400 flex items-center gap-0.5">
-                  {idx < 4 && <TrendingUp className="w-3 h-3 inline" />}
                   {card.change}
                 </span>
                 <span className="text-slate-400 truncate">{card.period}</span>

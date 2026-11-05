@@ -18,6 +18,9 @@ import Profile from './pages/Profile.jsx';
 import Notifications from './pages/Notifications.jsx';
 import SettingsPage from './pages/Settings.jsx';
 import NotFound from './pages/NotFound.jsx';
+import ChooseSubject from './pages/ChooseSubject.jsx';
+import SchoolItem from './pages/SchoolItem.jsx';
+import LearningOverview from './pages/LearningOverview.jsx';
 
 function WorkspaceRoutes() {
   return <Routes>
@@ -38,15 +41,22 @@ function WorkspaceRoutes() {
     <Route path="/profile" element={<Profile/>}/>
     <Route path="/notifications" element={<Notifications/>}/>
     <Route path="/settings" element={<SettingsPage/>}/>
+    <Route path="/choose-subject" element={<ChooseSubject/>}/>
+    <Route path="/subjects/:subjectId" element={<SchoolItem kind="subject"/>}/>
+    <Route path="/modules/:moduleId" element={<SchoolItem kind="module"/>}/>
+    <Route path="/resources" element={<LearningOverview type="resources"/>}/>
+    <Route path="/assignments" element={<LearningOverview type="assignments"/>}/>
+    <Route path="/progress" element={<LearningOverview type="progress"/>}/>
     <Route path="*" element={<NotFound/>}/>
   </Routes>;
 }
 
 function UserProtectedWorkspace() {
   const location = useLocation();
-  const { auth } = useApp();
+  const { auth, data } = useApp();
   if (auth.status === 'checking') return <main className="login-page"><p>Connecting to LearnConnect…</p></main>;
   if (auth.status !== 'authenticated') return <Navigate to="/login" state={{ from: location }} replace/>;
+  if (!data.profile?.subject && !['/dashboard', '/choose-subject'].includes(location.pathname)) return <Navigate to="/dashboard" replace/>;
   return <Shell><WorkspaceRoutes/></Shell>;
 }
 

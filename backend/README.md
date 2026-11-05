@@ -19,4 +19,10 @@ The active backend uses SQLite. `MONGODB_URI` is only a saved setting for refere
 
 ## Google sign-in
 
-Create a Google OAuth **Web application** client in Google Cloud Console. Add the app origin (for local development, the exact `http://127.0.0.1:<port>` URL printed by the backend) to its Authorized JavaScript origins. Copy the client ID to both `backend/.env` as `GOOGLE_CLIENT_ID` and `frontend/.env` as `VITE_GOOGLE_CLIENT_ID`, then restart the backend. The ID is public configuration; never put a Google client secret in frontend environment variables. Google identity tokens are verified by the backend before a LearnConnect session is issued.
+Create a Google OAuth **Web application** client in Google Cloud Console. Add the exact app origin (for local development, the `http://127.0.0.1:<port>` URL printed by the backend) to Authorized JavaScript origins. Copy its client ID to `backend/.env` as `GOOGLE_CLIENT_ID` and `frontend/.env` as `VITE_GOOGLE_CLIENT_ID`, then restart the backend. The client ID is public configuration; never put a Google client secret in frontend variables. Google ID tokens are verified server-side with Google's auth library. The backend links verified emails to existing accounts, stores the Google subject and profile picture, and issues a signed application JWT tracked in the existing revocable session table.
+
+Set `JWT_SECRET` in `backend/.env` to a unique random value of at least 32 characters. A local value is generated when this feature is installed; replace it with a deployment secret manager value in production. `frontend/.env.example` and `backend/.env.example` contain placeholders only; never commit `.env` files.
+
+Google login on `/admin/login` only succeeds when the verified Google email already belongs to an administrator provisioned by `ADMIN_EMAIL`. A Google login can create a student account; it cannot grant administrator permissions.
+
+The requested `MONGO_URI` is documented in the example for a future migration, but this project currently uses SQLite. This integration stores the Google ID and picture in the existing SQLite records to preserve current user state and admin features; it does not connect to MongoDB.

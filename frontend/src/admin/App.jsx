@@ -9,6 +9,7 @@ import Questions from './features/questions/pages/Questions';
 import Discussions from './features/discussions/pages/Discussions';
 import Sessions from './features/sessions/pages/Sessions';
 import ContentOverview from './features/dashboard/pages/ContentOverview';
+import AssignmentSubmissions from './features/assignments/pages/AssignmentSubmissions';
 
 export default function App() {
   return <Routes>
@@ -20,6 +21,7 @@ export default function App() {
       <Route path="questions" element={<Questions />} />
       <Route path="discussions" element={<Discussions />} />
       <Route path="sessions" element={<Sessions />} />
+      <Route path="assignments" element={<AssignmentSubmissions />} />
       <Route path="reports" element={<ContentOverview mode="content" />} />
       <Route path="categories" element={<ContentOverview mode="store" />} />
       <Route path="notifications" element={<ContentOverview mode="content" />} />

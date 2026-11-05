@@ -94,12 +94,14 @@ export const Dashboard = () => {
       {/* Top Greeting & Action Banner */}
       <div className="admin-dashboard-hero flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-3xl p-6 sm:p-8 text-white shadow-xl shadow-indigo-950/20">
         <div>
+          <p className="admin-dashboard-kicker">CAMPUS KNOWLEDGE HUB <span>·</span> ADMIN OVERVIEW</p>
           <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
             Hello, {admin?.name || 'Administrator'}
           </h1>
           <p className="mt-1 text-sm text-indigo-200 max-w-xl">
             Manage student activity, review community posts, and host learning sessions from one place.
           </p>
+          <div className="admin-hero-signals"><span><Users size={14}/><b>{stats.totalStudents}</b> students</span><span><Video size={14}/><b>{stats.upcomingSessions}</b> upcoming sessions</span></div>
         </div>
 
         <div className="flex items-center gap-3 shrink-0">

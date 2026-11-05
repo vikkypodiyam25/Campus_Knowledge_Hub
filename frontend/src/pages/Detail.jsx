@@ -14,7 +14,7 @@ export default function Detail({ kind }) {
   const [reply, setReply] = useState('');
 
   if (!item) return <Empty title="We couldn't find that post" action={<Button onClick={() => go(isQuestion ? '/questions' : '/discussions')}>Back to feed</Button>}/>;
-  const replies = isQuestion ? item.answers : item.comments;
+  const replies = (isQuestion ? item.answers : item.comments) || [];
   async function act(action, payload = {}, successMessage) {
     try { await mutate(collection, action, { id: item.id, payload }); if (successMessage) notify(successMessage); }
     catch (error) { notify(error.message); }

@@ -1,6 +1,26 @@
-﻿import React, { useMemo, useState } from 'react';
-import { Link, NavLink, Route, Routes, useLocation, useNavigate, useParams } from 'react-router-dom';
-import { Activity, ArrowDownUp, ArrowLeft, ArrowRight, Bell, Bookmark, CalendarDays, Check, ChevronDown, ChevronRight, CircleHelp, Compass, Hash, Heart, Home, LogOut, Menu, MessageCircle, MessageSquare, MoreHorizontal, Plus, Search, Send, Settings, Sparkles, ThumbsUp, Users, X, Zap } from 'lucide-react';
+import React, { useMemo, useState } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
+import { ArrowDownUp, Hash, Plus, Search } from 'lucide-react';
 import { useApp } from '../state.jsx';
-import { Avatar, Button, Empty, FilterBar, PageHead, QuestionCard, DiscussionCard, SessionCard, SectionHead, Stat, Tag, cats } from '../components/common/index.jsx';
-export default function Questions({explore=false}){const {data}=useApp();const categories=['All topics',...(data.categories?.length?data.categories:cats.slice(1))];const[search,setSearch]=useState(new URLSearchParams(location.search).get('q')||'');const[category,setCategory]=useState('All topics');const[status,setStatus]=useState('All');const[sort,setSort]=useState('Latest');const items=useMemo(()=>data.questions.filter(q=>(!search||`${q.title} ${q.description} ${q.category}`.toLowerCase().includes(search.toLowerCase()))&&(category==='All topics'||q.category===category)&&(status==='All'||(status==='Answered'?q.answers.length>0:q.answers.length===0))).sort((a,b)=>sort==='Most Upvoted'?b.votes-a.votes:sort==='Most Answered'?b.answers.length-a.answers.length:0),[data.questions,search,category,status,sort]);return <><PageHead eyebrow={explore?'DISCOVER':'YOUR LEARNING COMMUNITY'} title={explore?'Explore ideas & people':'Questions & answers'} sub={explore?'Find helpful answers, thoughtful discussions and new things to learn.':'Curious minds get unstuck together. Ask a question or share what you know.'} action={<Link to="/ask" className="btn btn-primary"><Plus size={16}/>Ask a doubt</Link>}/><div className="category-row">{categories.slice(0,8).map((c,i)=><button key={c} className={`category-chip ${category===c?'selected':''}`} onClick={()=>setCategory(c)}>{i===0&&<Hash size={14}/>} {c}</button>)}</div><FilterBar search={search} setSearch={setSearch} category={category} setCategory={setCategory} status={status} setStatus={setStatus} sort={sort} setSort={setSort} categories={categories} statuses={['All','Unanswered','Answered']}/><div className="results-label">{items.length} {items.length===1?'question':'questions'} <span>·</span> {status==='All'?'All questions':status}</div><div className="feed-list">{items.map(q=><QuestionCard key={q.id} q={q}/>)}{items.length===0&&<Empty title="No matching questions" body="Try another keyword or start a new question." action={<Link className="btn btn-primary" to="/ask"><Plus size={15}/>Ask a doubt</Link>}/>}</div></>;}
+import { Empty, PageHead, QuestionCard, cats } from '../components/common/index.jsx';
+import { getCurriculum } from '../data/curricula.js';
+
+export default function Questions({ explore = false }) {
+  const { data } = useApp();
+  const curriculum = getCurriculum(data.profile?.subject);
+  const categories = ['All topics', ...(curriculum?.categories || (data.categories?.length ? data.categories : cats.slice(1)))];
+  const [params] = useSearchParams();
+  const [search, setSearch] = useState(params.get('q') || '');
+  const [category, setCategory] = useState('All topics');
+  const [status, setStatus] = useState('All');
+  const [sort, setSort] = useState('Latest');
+  const items = useMemo(() => data.questions.filter(question => (!search || `${question.title} ${question.description} ${question.category}`.toLowerCase().includes(search.toLowerCase())) && (category === 'All topics' || question.category === category) && (status === 'All' || (status === 'Answered' ? question.answers.length > 0 : question.answers.length === 0))).sort((a, b) => sort === 'Most Upvoted' ? b.votes - a.votes : sort === 'Most Answered' ? b.answers.length - a.answers.length : new Date(b.createdAt || 0) - new Date(a.createdAt || 0)), [data.questions, search, category, status, sort]);
+
+  return <>
+    <PageHead eyebrow={explore ? 'DISCOVER' : curriculum?.name.toUpperCase() || 'YOUR LEARNING COMMUNITY'} title="Questions & answers" sub={explore ? 'Find helpful answers, thoughtful discussions and new things to learn.' : `Get unstuck together with learners in ${curriculum?.shortName || 'your school'}.`} action={<Link to="/ask" className="btn btn-primary"><Plus size={16}/>Ask a doubt</Link>}/>
+    <div className="category-row">{categories.slice(0, 9).map((item, index) => <button key={item} className={`category-chip ${category === item ? 'selected' : ''}`} onClick={() => setCategory(item)}>{index === 0 && <Hash size={14}/>} {item}</button>)}</div>
+    <div className="filterbar"><label className="filter-search"><Search size={16}/><input value={search} onChange={event => setSearch(event.target.value)} placeholder={`Search ${curriculum?.shortName || 'questions'}...`}/></label><select value={category} onChange={event => setCategory(event.target.value)}>{categories.map(item => <option key={item}>{item}</option>)}</select><select value={status} onChange={event => setStatus(event.target.value)}><option>All</option><option>Unanswered</option><option>Answered</option></select><select value={sort} onChange={event => setSort(event.target.value)}><option>Latest</option><option>Most Upvoted</option><option>Most Answered</option></select><ArrowDownUp className="filter-sort-icon" size={15}/></div>
+    <div className="results-label">{items.length} {items.length === 1 ? 'question' : 'questions'} <span>·</span> {status === 'All' ? `Topics in ${curriculum?.shortName || 'your school'}` : status}</div>
+    <div className="feed-list">{items.map(question => <QuestionCard key={question.id} q={question}/>)}{items.length === 0 && <Empty title="No matching questions" body="Try another topic or ask the first question for this subject." action={<Link className="btn btn-primary" to="/ask"><Plus size={15}/>Ask a doubt</Link>}/>}</div>
+  </>;
+}

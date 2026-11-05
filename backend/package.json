@@ -10,5 +10,9 @@
   },
   "engines": {
     "node": ">=22.13.0"
+  },
+  "dependencies": {
+    "google-auth-library": "^11.3.3",
+    "jsonwebtoken": "^9.0.3"
   }
 }

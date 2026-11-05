@@ -4,7 +4,6 @@ const path = require('node:path');
 function loadEnv() {
   const envCandidates = [
     path.resolve(__dirname, '..', '.env'),
-    path.resolve(__dirname, '..', '.env.example'),
   ];
 
   for (const envFile of envCandidates) {

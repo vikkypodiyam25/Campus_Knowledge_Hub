@@ -42,8 +42,13 @@ async function startFrontendMiddleware() {
   const viteEntry = path.join(frontendRoot, 'node_modules', 'vite', 'dist', 'node', 'index.js');
   if (!fs.existsSync(viteEntry)) throw new Error('Frontend dependencies are missing. Run npm install in the frontend folder.');
   const { createServer } = await import(pathToFileURL(viteEntry).href);
+  const reactPluginEntry = path.join(frontendRoot, 'node_modules', '@vitejs', 'plugin-react', 'dist', 'index.js');
+  const { default: react } = await import(pathToFileURL(reactPluginEntry).href);
   viteServer = await createServer({
-    configFile: path.join(frontendRoot, 'vite.config.js'),
+    // Avoid Vite's config bundling subprocess; the same project config is created
+    // directly here so the dev server can start in restricted Windows environments.
+    configFile: false,
+    plugins: [react()],
     root: frontendRoot,
     server: { middlewareMode: true, ws: { server } },
     appType: 'spa',
