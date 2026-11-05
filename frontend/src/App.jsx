@@ -28,6 +28,7 @@ function WorkspaceRoutes() {
     <Route path="/questions/:id" element={<Detail kind="question"/>}/>
     <Route path="/discussions" element={<Discussions/>}/>
     <Route path="/discussions/new" element={<FormPage type="discussion"/>}/>
+    <Route path="/share-learning" element={<FormPage type="learning"/>}/>
     <Route path="/discussions/:id" element={<Detail kind="discussion"/>}/>
     <Route path="/sessions" element={<Sessions/>}/>
     <Route path="/sessions/new" element={<FormPage type="session"/>}/>

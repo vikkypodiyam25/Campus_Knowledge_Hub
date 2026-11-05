@@ -4,8 +4,9 @@ import OverviewChart from '../components/OverviewChart';
 import RecentActivity from '../components/RecentActivity';
 import dashboardService from '../dashboardService';
 import { useAdminAuth } from '../../../hooks/useAdminAuth';
-import { RefreshCw, Download, Video, Users, HelpCircle, MessageSquare, ArrowRight } from 'lucide-react';
+import { RefreshCw, Download, Video, Users, HelpCircle, MessageSquare, ArrowRight, Plus, X } from 'lucide-react';
 import Button from '../../../components/common/Button';
+import api from '../../../services/api.js';
 import toast from 'react-hot-toast';
 import { Link } from 'react-router-dom';
 
@@ -16,6 +17,9 @@ export const Dashboard = () => {
   const [charts, setCharts] = useState({ growth: [], distribution: [], weeklyActivity: [] });
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [loadError, setLoadError] = useState('');
+  const [postType, setPostType] = useState(null);
+  const [post, setPost] = useState({ title: '', content: '', category: 'Learning', tags: '' });
+  const [savingPost, setSavingPost] = useState(false);
   const quickLinks = [
     { label: 'Manage students', description: `${stats.totalStudents} registered`, path: '/admin/users', icon: Users, color: 'text-indigo-600 bg-indigo-50 dark:text-indigo-300 dark:bg-indigo-950/50' },
     { label: 'Review doubts', description: `${stats.totalQuestions} questions`, path: '/admin/questions', icon: HelpCircle, color: 'text-blue-600 bg-blue-50 dark:text-blue-300 dark:bg-blue-950/50' },
@@ -57,9 +61,36 @@ export const Dashboard = () => {
     toast.success('Exported dashboard metrics summary');
   };
 
+  const publishPost = async (event) => {
+    event.preventDefault();
+    setSavingPost(true);
+    try {
+      await api.post(`/admin/${postType === 'doubt' ? 'questions' : 'discussions'}`, { ...post, category: postType === 'learning' ? 'Learning' : post.category, tags: post.tags.split(',').map(tag => tag.trim()).filter(Boolean) });
+      toast.success(postType === 'doubt' ? 'Doubt shared with students' : 'Learning shared with students');
+      setPostType(null);
+      setPost({ title: '', content: '', category: 'Learning', tags: '' });
+      await loadData();
+    } catch (error) { toast.error(error.message || 'Could not publish post'); }
+    finally { setSavingPost(false); }
+  };
+
   return (
     <div className="space-y-6">
       {loadError && <div role="alert" className="flex flex-col gap-3 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800 sm:flex-row sm:items-center sm:justify-between dark:border-rose-900/70 dark:bg-rose-950/40 dark:text-rose-200"><span>{loadError}</span><Button variant="secondary" size="sm" onClick={handleManualRefresh} isLoading={isRefreshing}>Retry</Button></div>}
+      <section className="flex flex-wrap items-center gap-3" aria-label="Share with students">
+        <span className="mr-1 text-sm font-semibold text-slate-700 dark:text-slate-200">Share with students</span>
+        <Button variant="secondary" size="sm" leftIcon={HelpCircle} onClick={() => setPostType('doubt')}>Post a doubt</Button>
+        <Button variant="secondary" size="sm" leftIcon={Plus} onClick={() => setPostType('learning')}>Share learning</Button>
+      </section>
+      {postType && <div className="fixed inset-0 z-50 grid place-items-center bg-slate-950/50 p-4" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget && !savingPost) setPostType(null); }}>
+        <form onSubmit={publishPost} className="w-full max-w-xl space-y-4 rounded-2xl bg-white p-6 shadow-2xl dark:bg-slate-900" aria-labelledby="admin-post-title">
+          <div className="flex items-start justify-between"><div><h2 id="admin-post-title" className="text-lg font-bold text-slate-900 dark:text-white">{postType === 'doubt' ? 'Post a doubt' : 'Share learning'}</h2><p className="mt-1 text-sm text-slate-500">This post will appear in the student community.</p></div><button type="button" className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800" onClick={() => setPostType(null)} aria-label="Close"><X size={18}/></button></div>
+          <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">Title<input required maxLength={120} value={post.title} onChange={event => setPost(current => ({ ...current, title: event.target.value }))} className="mt-1 block w-full rounded-lg border border-slate-300 bg-transparent px-3 py-2 dark:border-slate-700"/></label>
+          <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">{postType === 'doubt' ? 'Question details' : 'What did you learn?'}<textarea required maxLength={5000} rows={5} value={post.content} onChange={event => setPost(current => ({ ...current, content: event.target.value }))} className="mt-1 block w-full rounded-lg border border-slate-300 bg-transparent px-3 py-2 dark:border-slate-700"/></label>
+          <div className="grid gap-4 sm:grid-cols-2"><label className="block text-sm font-medium text-slate-700 dark:text-slate-200">Category<select disabled={postType === 'learning'} value={postType === 'learning' ? 'Learning' : post.category} onChange={event => setPost(current => ({ ...current, category: event.target.value }))} className="mt-1 block w-full rounded-lg border border-slate-300 bg-transparent px-3 py-2 dark:border-slate-700"><option>Learning</option><option>Community</option><option>React</option><option>JavaScript</option><option>Node.js</option></select></label><label className="block text-sm font-medium text-slate-700 dark:text-slate-200">Tags<input value={post.tags} onChange={event => setPost(current => ({ ...current, tags: event.target.value }))} placeholder="react, tips" className="mt-1 block w-full rounded-lg border border-slate-300 bg-transparent px-3 py-2 dark:border-slate-700"/></label></div>
+          <div className="flex justify-end gap-2"><Button variant="secondary" type="button" onClick={() => setPostType(null)}>Cancel</Button><Button variant="primary" type="submit" isLoading={savingPost} leftIcon={Plus}>Publish</Button></div>
+        </form>
+      </div>}
       {/* Top Greeting & Action Banner */}
       <div className="admin-dashboard-hero flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-3xl p-6 sm:p-8 text-white shadow-xl shadow-indigo-950/20">
         <div>

@@ -63,6 +63,16 @@ async function handle(req, res, url) {
       service.storeAdminItem(storageKey, updated);
       return send(res, 200, { success: true, message: 'Content deleted.' });
     }
+    if (req.method === 'POST' && !id && ['questions', 'discussions'].includes(kind)) {
+      const body = await readBody(req);
+      const title = String(body.title || '').trim();
+      const content = String(body.content || '').trim();
+      if (!title || title.length > 120 || !content || content.length > 5000) return fail(res, 400, 'Enter a title (up to 120 characters) and content (up to 5000 characters).');
+      const common = { id: `admin_${kind === 'questions' ? 'q' : 'discussion'}_${Date.now()}`, title, content, category: String(body.category || (kind === 'questions' ? 'General' : 'Learning')).slice(0, 60), author: { name: auth.session.admin_name || 'LearnConnect Admin', email: auth.session.admin_email, role }, createdAt: new Date().toISOString(), tags: Array.isArray(body.tags) ? body.tags.slice(0, 20).map(tag => String(tag).slice(0, 40)) : [] };
+      const item = kind === 'questions' ? { ...common, status: 'Unanswered', upvotes: 0, views: 0, answersCount: 0, answers: [] } : { ...common, likes: 0, commentsCount: 0, isPinned: false, isHidden: false, comments: [] };
+      service.storeAdminItem(storageKey, [item, ...collection]);
+      return send(res, 201, { success: true, message: 'Community post created.', data: item });
+    }
     if (req.method === 'POST' && kind === 'sessions' && !id) {
       const body = await readBody(req);
       const title = String(body.title || '').trim();

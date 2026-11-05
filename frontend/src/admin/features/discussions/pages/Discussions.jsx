@@ -145,10 +145,10 @@ export const Discussions = () => {
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
-          Discussion Forum Management
+          Learning Shares & Discussion Management
         </h1>
         <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-          Review community discussions, pin featured roadmaps, monitor sentiments, and moderate threads
+          Review student learning shares and discussions, pin useful posts, and moderate community threads
         </p>
       </div>
 
@@ -167,7 +167,7 @@ export const Discussions = () => {
             <Select
               value={categoryFilter}
               onChange={(e) => setCategoryFilter(e.target.value)}
-              options={[{ value: 'All', label: 'All Categories' }, ...DEFAULT_CATEGORIES]}
+              options={[{ value: 'All', label: 'All Categories' }, ...DEFAULT_CATEGORIES, { value: 'Learning', label: 'Learning' }, { value: 'Community', label: 'Community' }]}
             />
           </div>
 
