@@ -41,21 +41,11 @@ function WorkspaceRoutes() {
   </Routes>;
 }
 
-function hasRegisteredUserSession() {
-  try {
-    const rawSession = localStorage.getItem('learnconnect-user-session') || sessionStorage.getItem('learnconnect-user-session');
-    if (!rawSession) return false;
-    const session = JSON.parse(rawSession);
-    const accounts = JSON.parse(localStorage.getItem('learnconnect-user-accounts') || '[]');
-    return Array.isArray(accounts) && accounts.some(account => account.id === session.id && account.email === session.email);
-  } catch {
-    return false;
-  }
-}
-
 function UserProtectedWorkspace() {
   const location = useLocation();
-  if (!hasRegisteredUserSession()) return <Navigate to="/login" state={{ from: location }} replace/>;
+  const { auth } = useApp();
+  if (auth.status === 'checking') return <main className="login-page"><p>Connecting to LearnConnect…</p></main>;
+  if (auth.status !== 'authenticated') return <Navigate to="/login" state={{ from: location }} replace/>;
   return <Shell><WorkspaceRoutes/></Shell>;
 }
 

@@ -15,8 +15,8 @@ export const StatsCards = ({ stats }) => {
     {
       title: 'Total Registered Students',
       value: stats.totalStudents,
-      change: '+12.4%',
-      period: 'vs last month',
+      change: 'Current total',
+      period: 'registered accounts',
       icon: Users,
       color: 'indigo',
       bgColor: 'bg-indigo-50 dark:bg-indigo-950/40',
@@ -25,8 +25,8 @@ export const StatsCards = ({ stats }) => {
     {
       title: 'Active Students',
       value: stats.activeStudents,
-      change: '+8.1%',
-      period: 'this week',
+      change: 'Current total',
+      period: 'active accounts',
       icon: UserCheck,
       color: 'emerald',
       bgColor: 'bg-emerald-50 dark:bg-emerald-950/40',
@@ -35,8 +35,8 @@ export const StatsCards = ({ stats }) => {
     {
       title: 'Total Questions / Doubts',
       value: stats.totalQuestions,
-      change: '+15.3%',
-      period: 'active doubts',
+      change: 'Current total',
+      period: 'questions',
       icon: HelpCircle,
       color: 'blue',
       bgColor: 'bg-blue-50 dark:bg-blue-950/40',
@@ -45,8 +45,8 @@ export const StatsCards = ({ stats }) => {
     {
       title: 'Total Discussions',
       value: stats.totalDiscussions,
-      change: '+9.7%',
-      period: 'peer threads',
+      change: 'Current total',
+      period: 'discussion threads',
       icon: MessageSquare,
       color: 'purple',
       bgColor: 'bg-purple-50 dark:bg-purple-950/40',
@@ -55,18 +55,18 @@ export const StatsCards = ({ stats }) => {
     {
       title: 'Total Live Sessions',
       value: stats.totalSessions,
-      change: `${stats.upcomingSessions || 2} upcoming`,
-      period: 'cohort workshops',
+      change: `${stats.upcomingSessions || 0} upcoming`,
+      period: 'live sessions',
       icon: Video,
       color: 'cyan',
       bgColor: 'bg-cyan-50 dark:bg-cyan-950/40',
       textColor: 'text-cyan-600 dark:text-cyan-400',
     },
     {
-      title: 'Pending Reports',
+      title: 'Reports',
       value: stats.pendingReports,
-      change: 'Requires review',
-      period: 'moderation queue',
+      change: 'Not configured',
+      period: 'report intake unavailable',
       icon: ShieldAlert,
       color: 'amber',
       bgColor: 'bg-amber-50 dark:bg-amber-950/40',
@@ -97,8 +97,8 @@ export const StatsCards = ({ stats }) => {
                 {formatNumber(card.value)}
               </span>
               <div className="mt-1 flex items-center gap-1.5 text-[11px]">
-                <span className="font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-0.5">
-                  <TrendingUp className="w-3 h-3 inline" />
+                <span className="font-semibold text-slate-500 dark:text-slate-400 flex items-center gap-0.5">
+                  {idx < 4 && <TrendingUp className="w-3 h-3 inline" />}
                   {card.change}
                 </span>
                 <span className="text-slate-400 truncate">{card.period}</span>

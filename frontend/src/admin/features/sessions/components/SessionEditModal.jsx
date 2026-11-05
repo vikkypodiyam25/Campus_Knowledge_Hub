@@ -4,7 +4,7 @@ import Input from '../../../components/common/Input';
 import Select from '../../../components/common/Select';
 import Button from '../../../components/common/Button';
 import { SESSION_STATUS, DEFAULT_CATEGORIES } from '../../../utils/constants';
-import { validateRequired, isValidUrl } from '../../../utils/validators';
+import { validateRequired } from '../../../utils/validators';
 
 export const SessionEditModal = ({
   isOpen,
@@ -47,13 +47,13 @@ export const SessionEditModal = ({
         title: '',
         category: 'React.js',
         status: SESSION_STATUS.UPCOMING,
-        scheduledDate: new Date(Date.now() + 86400000 * 2).toISOString().slice(0, 16),
+        scheduledDate: '',
         duration: '60 mins',
         maxCapacity: 100,
-        meetingLink: 'https://meet.learnconnect.edu/live-hub',
+        meetingLink: '',
         description: '',
-        hostName: 'Vikky Podiyam',
-        hostEmail: 'vikkypodiyam25@navgurukul.org',
+        hostName: '',
+        hostEmail: '',
       });
       setErrors({});
     }
@@ -63,14 +63,16 @@ export const SessionEditModal = ({
     e.preventDefault();
     const titleErr = validateRequired(formData.title, 'Session title');
     const descErr = validateRequired(formData.description, 'Session description');
+    const dateErr = formData.scheduledDate ? '' : 'Choose a session date and time.';
 
-    if (titleErr || descErr) {
-      setErrors({ title: titleErr, description: descErr });
+    if (titleErr || descErr || dateErr) {
+      setErrors({ title: titleErr, description: descErr, scheduledDate: dateErr });
       return;
     }
 
-    onSave(formData);
-    onClose();
+    if (Number.isNaN(new Date(formData.scheduledDate).getTime())) { setErrors({ scheduledDate: 'Enter a valid session date and time.' }); return; }
+    const submitted = { ...formData, scheduledDate: new Date(formData.scheduledDate).toISOString() };
+    Promise.resolve(onSave(submitted)).then(onClose).catch(error => setErrors({ form: error.message }));
   };
 
   return (
@@ -84,13 +86,14 @@ export const SessionEditModal = ({
           <Button variant="secondary" size="md" onClick={onClose}>
             Cancel
           </Button>
-          <Button variant="primary" size="md" onClick={handleSubmit}>
+          <Button variant="primary" size="md" type="submit">
             {session ? 'Save Changes' : 'Schedule Session'}
           </Button>
         </div>
       }
     >
       <form onSubmit={handleSubmit} className="space-y-4">
+        {errors.form && <p role="alert" className="text-sm text-rose-600">{errors.form}</p>}
         <Input
           label="Session Title"
           placeholder="e.g. Masterclass: Full Stack System Architecture"
@@ -112,7 +115,7 @@ export const SessionEditModal = ({
             label="Status"
             value={formData.status}
             onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-            options={Object.values(SESSION_STATUS)}
+            options={Object.values(SESSION_STATUS).filter(status => status !== SESSION_STATUS.CANCELLED)}
           />
 
           <Input
@@ -129,12 +132,13 @@ export const SessionEditModal = ({
             type="datetime-local"
             value={formData.scheduledDate}
             onChange={(e) => setFormData({ ...formData, scheduledDate: e.target.value })}
+            error={errors.scheduledDate}
           />
 
           <Input
             label="Max Student Capacity"
             type="number"
-            min={10}
+            min={1}
             max={500}
             value={formData.maxCapacity}
             onChange={(e) => setFormData({ ...formData, maxCapacity: e.target.value })}
@@ -143,24 +147,14 @@ export const SessionEditModal = ({
 
         <Input
           label="Meeting URL"
-          placeholder="https://meet.learnconnect.edu/session-room"
+            placeholder="https://meet.google.com/... or your meeting room URL"
           value={formData.meetingLink}
           onChange={(e) => setFormData({ ...formData, meetingLink: e.target.value })}
         />
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <Input
-            label="Instructor / Host Name"
-            value={formData.hostName}
-            onChange={(e) => setFormData({ ...formData, hostName: e.target.value })}
-          />
-
-          <Input
-            label="Host Email"
-            type="email"
-            value={formData.hostEmail}
-            onChange={(e) => setFormData({ ...formData, hostEmail: e.target.value })}
-          />
+          <Input label="Instructor / Host Name" value={formData.hostName || 'Administrator'} disabled />
+          <Input label="Host Email" type="email" value={formData.hostEmail} disabled />
         </div>
 
         <div>

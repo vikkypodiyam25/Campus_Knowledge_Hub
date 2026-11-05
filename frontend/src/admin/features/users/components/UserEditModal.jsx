@@ -1,10 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import Modal from '../../../components/common/Modal';
 import Input from '../../../components/common/Input';
-import Select from '../../../components/common/Select';
 import Button from '../../../components/common/Button';
-import { USER_STATUS } from '../../../utils/constants';
-import { validateEmail, validateRequired } from '../../../utils/validators';
+import { validateRequired } from '../../../utils/validators';
 
 export const UserEditModal = ({
   isOpen,
@@ -14,9 +12,6 @@ export const UserEditModal = ({
 }) => {
   const [formData, setFormData] = useState({
     name: '',
-    email: '',
-    batch: '',
-    status: USER_STATUS.ACTIVE,
     bio: '',
     skills: '',
   });
@@ -28,9 +23,6 @@ export const UserEditModal = ({
     if (user) {
       setFormData({
         name: user.name || '',
-        email: user.email || '',
-        batch: user.batch || 'Batch 2024-A',
-        status: user.status || USER_STATUS.ACTIVE,
         bio: user.bio || '',
         skills: Array.isArray(user.skills) ? user.skills.join(', ') : (user.skills || ''),
       });
@@ -42,10 +34,8 @@ export const UserEditModal = ({
     e.preventDefault();
 
     const nameErr = validateRequired(formData.name, 'Full name');
-    const emailErr = validateEmail(formData.email);
-
-    if (nameErr || emailErr) {
-      setErrors({ name: nameErr, email: emailErr });
+    if (nameErr) {
+      setErrors({ name: nameErr });
       return;
     }
 
@@ -56,20 +46,19 @@ export const UserEditModal = ({
       ? formData.skills.split(',').map(s => s.trim()).filter(Boolean)
       : [];
 
-    onSave({
+    Promise.resolve(onSave({
       ...formData,
       skills: skillsArray,
-    });
-
-    setIsSubmitting(false);
-    onClose();
+    })).then(onClose).catch(error => setErrors({ form: error.message })).finally(() => setIsSubmitting(false));
   };
+
+  if (!user) return null;
 
   return (
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={user ? 'Edit Student Information' : 'Add New Student'}
+      title="Edit Student Information"
       size="md"
       footer={
         <div className="flex items-center justify-end gap-3 w-full">
@@ -83,6 +72,7 @@ export const UserEditModal = ({
       }
     >
       <form onSubmit={handleSubmit} className="space-y-4">
+        {errors.form && <p role="alert" className="text-sm text-rose-600">{errors.form}</p>}
         <Input
           label="Full Name"
           placeholder="e.g. Aarav Sharma"
@@ -92,35 +82,6 @@ export const UserEditModal = ({
           required
         />
 
-        <Input
-          label="Email Address"
-          type="email"
-          placeholder="student@campus.edu"
-          value={formData.email}
-          onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-          error={errors.email}
-          required
-        />
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <Input
-            label="Campus Batch"
-            placeholder="e.g. Batch 2024-A"
-            value={formData.batch}
-            onChange={(e) => setFormData({ ...formData, batch: e.target.value })}
-          />
-
-          <Select
-            label="Account Status"
-            value={formData.status}
-            onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-            options={[
-              { value: USER_STATUS.ACTIVE, label: 'Active' },
-              { value: USER_STATUS.INACTIVE, label: 'Inactive' },
-              { value: USER_STATUS.SUSPENDED, label: 'Suspended' },
-            ]}
-          />
-        </div>
 
         <div>
           <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5">

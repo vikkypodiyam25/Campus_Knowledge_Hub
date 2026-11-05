@@ -1,6 +1,6 @@
 import React from 'react';
 import { APP_CONFIG } from '../../utils/constants';
-import { ShieldCheck, Sparkles } from 'lucide-react';
+import { ShieldCheck } from 'lucide-react';
 
 export const AdminFooter = () => {
   return (
@@ -11,7 +11,7 @@ export const AdminFooter = () => {
             {APP_CONFIG.name}
           </span>
           <span>•</span>
-          <span>v{APP_CONFIG.version} SaaS Admin</span>
+          <span>Admin workspace</span>
           <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-medium text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
             Operational
@@ -21,7 +21,7 @@ export const AdminFooter = () => {
         <div className="flex items-center gap-6">
           <span className="flex items-center gap-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300">
             <ShieldCheck className="w-3.5 h-3.5 text-indigo-500" />
-            SOC2 Certified Mock Security
+            Protected admin access
           </span>
           <span className="text-slate-400">
             Crafted for Campus Knowledge Hub

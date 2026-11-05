@@ -17,6 +17,7 @@ import {
 
 export const OverviewChart = ({ growthData = [], distributionData = [], weeklyData = [] }) => {
   const [activeTab, setActiveTab] = useState('growth'); // 'growth' | 'qa' | 'weekly'
+  const hasAnalytics = growthData.length || weeklyData.length;
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -28,12 +29,12 @@ export const OverviewChart = ({ growthData = [], distributionData = [], weeklyDa
               Platform Engagement & Growth
             </h3>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-              Live tracking across students, questions, and weekly forum activity
+              Analytics will appear as platform activity is recorded.
             </p>
           </div>
 
           {/* Tab selector */}
-          <div className="flex items-center gap-1 rounded-xl bg-slate-100 p-1 dark:bg-slate-800 self-start sm:self-auto">
+          {Boolean(hasAnalytics) && <div className="flex items-center gap-1 rounded-xl bg-slate-100 p-1 dark:bg-slate-800 self-start sm:self-auto">
             <button
               type="button"
               onClick={() => setActiveTab('growth')}
@@ -67,11 +68,13 @@ export const OverviewChart = ({ growthData = [], distributionData = [], weeklyDa
             >
               Weekly Pulse
             </button>
-          </div>
+          </div>}
         </div>
 
         {/* Chart Viewport */}
         <div className="h-72 w-full">
+          {!hasAnalytics && <div className="h-full grid place-items-center text-sm text-slate-400">No analytics data available yet.</div>}
+          {hasAnalytics && <>
           {activeTab === 'growth' && (
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={growthData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
@@ -149,6 +152,7 @@ export const OverviewChart = ({ growthData = [], distributionData = [], weeklyDa
               </BarChart>
             </ResponsiveContainer>
           )}
+          </>}
         </div>
       </div>
 
@@ -159,12 +163,12 @@ export const OverviewChart = ({ growthData = [], distributionData = [], weeklyDa
             Student Distribution
           </h3>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-            Active enrolled cohort breakdown
+            Current registered account status
           </p>
         </div>
 
         <div className="h-52 w-full my-auto flex items-center justify-center">
-          <ResponsiveContainer width="100%" height="100%">
+          {distributionData.length === 0 ? <span className="text-xs text-slate-400">No student data yet.</span> : <ResponsiveContainer width="100%" height="100%">
             <PieChart>
               <Pie
                 data={distributionData}
@@ -189,17 +193,17 @@ export const OverviewChart = ({ growthData = [], distributionData = [], weeklyDa
                 }}
               />
             </PieChart>
-          </ResponsiveContainer>
+          </ResponsiveContainer>}
         </div>
 
-        <div className="space-y-1.5 pt-2 border-t border-slate-100 dark:border-slate-800 text-xs">
+          <div className="space-y-1.5 pt-2 border-t border-slate-100 dark:border-slate-800 text-xs">
           {distributionData.map((item, idx) => (
             <div key={idx} className="flex items-center justify-between">
               <span className="flex items-center gap-2 text-slate-600 dark:text-slate-400">
                 <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: item.color }} />
                 {item.name}
               </span>
-              <span className="font-semibold text-slate-800 dark:text-slate-200">{item.value}%</span>
+              <span className="font-semibold text-slate-800 dark:text-slate-200">{item.value}</span>
             </div>
           ))}
         </div>

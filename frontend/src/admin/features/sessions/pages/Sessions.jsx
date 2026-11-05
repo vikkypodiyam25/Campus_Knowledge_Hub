@@ -31,9 +31,9 @@ export const Sessions = () => {
   const [selectedForDelete, setSelectedForDelete] = useState(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
-  const fetchSessions = () => {
+  const fetchSessions = async () => {
     try {
-      const data = sessionService.getAll();
+      const data = await sessionService.getAll();
       setSessions(data);
     } catch {
       toast.error('Failed to load live sessions');
@@ -100,37 +100,37 @@ export const Sessions = () => {
   const totalPages = Math.ceil(filteredSessions.length / pageSize) || 1;
 
   // Actions
-  const handleApprove = (id) => {
-    const updated = sessionService.updateStatus(id, SESSION_STATUS.ONGOING);
+  const handleApprove = async (id) => {
+    const updated = await sessionService.updateStatus(id, SESSION_STATUS.ONGOING);
     if (updated) {
       toast.success('Session marked as Ongoing & room unlocked');
       fetchSessions();
     }
   };
 
-  const handleConfirmCancel = () => {
+  const handleConfirmCancel = async () => {
     if (!selectedForCancel) return;
-    sessionService.updateStatus(selectedForCancel.id, SESSION_STATUS.CANCELLED);
+    await sessionService.updateStatus(selectedForCancel.id, SESSION_STATUS.CANCELLED);
     toast.success('Live session has been cancelled');
     setSelectedForCancel(null);
     fetchSessions();
   };
 
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = async () => {
     if (!selectedForDelete) return;
-    sessionService.delete(selectedForDelete.id);
+    await sessionService.delete(selectedForDelete.id);
     toast.success('Session deleted permanently');
     setSelectedForDelete(null);
     fetchSessions();
   };
 
-  const handleSaveSession = (data) => {
+  const handleSaveSession = async (data) => {
     if (selectedForEdit) {
-      sessionService.update(selectedForEdit.id, data);
+      await sessionService.update(selectedForEdit.id, data);
       toast.success('Session updated successfully');
       setSelectedForEdit(null);
     } else {
-      sessionService.create(data);
+      await sessionService.create(data);
       toast.success('Live session created and scheduled');
       setIsAddModalOpen(false);
     }

@@ -6,8 +6,10 @@ import { ShieldAlert, ArrowLeft } from 'lucide-react';
 import Button from '../components/common/Button';
 
 export const AdminProtectedRoute = ({ children }) => {
-  const { isAuthenticated, role } = useAdminAuth();
+  const { isAuthenticated, role, authReady } = useAdminAuth();
   const location = useLocation();
+
+  if (!authReady) return <div className="min-h-screen grid place-items-center text-sm text-slate-500">Checking admin session…</div>;
 
   if (!isAuthenticated) {
     return <Navigate to="/admin/login" state={{ from: location }} replace />;
@@ -28,9 +30,6 @@ export const AdminProtectedRoute = ({ children }) => {
         </h2>
         <p className="mt-2 max-w-md text-sm text-slate-500 dark:text-slate-400">
           Your active role (<span className="font-semibold text-indigo-600 dark:text-indigo-400">{role}</span>) does not have sufficient permissions to view this section.
-        </p>
-        <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
-          Tip: You can switch roles using the demo badge at the top right of the navigation bar.
         </p>
 
         <div className="mt-6 flex items-center gap-3">

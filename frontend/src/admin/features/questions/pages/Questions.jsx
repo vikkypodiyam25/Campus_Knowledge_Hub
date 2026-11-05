@@ -29,9 +29,9 @@ export const Questions = () => {
   const [selectedForDelete, setSelectedForDelete] = useState(null);
   const [selectedForRemoval, setSelectedForRemoval] = useState(null);
 
-  const fetchQuestions = () => {
+  const fetchQuestions = async () => {
     try {
-      const data = questionService.getAll();
+      const data = await questionService.getAll();
       setQuestions(data);
     } catch {
       toast.error('Failed to load doubts');
@@ -101,34 +101,34 @@ export const Questions = () => {
   const totalPages = Math.ceil(filteredQuestions.length / pageSize) || 1;
 
   // Actions
-  const handleResolve = (id) => {
-    const updated = questionService.resolve(id);
+  const handleResolve = async (id) => {
+    const updated = await questionService.resolve(id);
     if (updated) {
       toast.success('Question marked as resolved');
       fetchQuestions();
     }
   };
 
-  const handleEditSave = (data) => {
+  const handleEditSave = async (data) => {
     if (!selectedForEdit) return;
-    const updated = questionService.update(selectedForEdit.id, data);
+    const updated = await questionService.update(selectedForEdit.id, data);
     if (updated) {
       toast.success('Question updated successfully');
       fetchQuestions();
     }
   };
 
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = async () => {
     if (!selectedForDelete) return;
-    questionService.delete(selectedForDelete.id);
+    await questionService.delete(selectedForDelete.id);
     toast.success('Question deleted');
     setSelectedForDelete(null);
     fetchQuestions();
   };
 
-  const handleConfirmRemoval = () => {
+  const handleConfirmRemoval = async () => {
     if (!selectedForRemoval) return;
-    questionService.removeInappropriate(selectedForRemoval.id);
+    await questionService.removeInappropriate(selectedForRemoval.id);
     toast.success('Question flagged and removed from community feeds');
     setSelectedForRemoval(null);
     fetchQuestions();

@@ -14,9 +14,9 @@ export const useUsers = () => {
 
   const debouncedSearch = useDebounce(searchTerm, 250);
 
-  const fetchUsers = () => {
+  const fetchUsers = async () => {
     try {
-      const data = userService.getAll();
+      const data = await userService.getAll();
       setUsers(data);
     } catch {
       toast.error('Failed to load students');
@@ -86,24 +86,24 @@ export const useUsers = () => {
   const totalPages = Math.ceil(filteredUsers.length / pageSize) || 1;
 
   // Actions
-  const handleUpdateStatus = (id, newStatus) => {
-    const updated = userService.updateStatus(id, newStatus);
+  const handleUpdateStatus = async (id, newStatus) => {
+    const updated = await userService.updateStatus(id, newStatus);
     if (updated) {
       toast.success(`Student status changed to ${newStatus}`);
       fetchUsers();
     }
   };
 
-  const handleDeleteUser = (id) => {
-    const success = userService.delete(id);
+  const handleDeleteUser = async (id) => {
+    const success = await userService.delete(id);
     if (success) {
       toast.success('Student account deleted successfully');
       fetchUsers();
     }
   };
 
-  const handleUpdateUser = (id, data) => {
-    const updated = userService.update(id, data);
+  const handleUpdateUser = async (id, data) => {
+    const updated = await userService.update(id, data);
     if (updated) {
       toast.success('Student profile updated');
       fetchUsers();
@@ -111,8 +111,8 @@ export const useUsers = () => {
     return updated;
   };
 
-  const handleCreateUser = (data) => {
-    const created = userService.create(data);
+  const handleCreateUser = async (data) => {
+    const created = await userService.create(data);
     if (created) {
       toast.success('New student added successfully');
       fetchUsers();

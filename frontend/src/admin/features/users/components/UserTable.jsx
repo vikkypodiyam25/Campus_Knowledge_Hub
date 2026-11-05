@@ -23,7 +23,7 @@ export const UserTable = ({
       render: (user) => (
         <div className="flex items-center gap-3">
           <img
-            src={user.avatar}
+            src={user.avatar || '/favicon.svg'}
             alt={user.name}
             className="w-9 h-9 rounded-full object-cover shrink-0 ring-1 ring-slate-200 dark:ring-slate-700"
           />

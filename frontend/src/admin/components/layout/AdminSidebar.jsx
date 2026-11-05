@@ -127,17 +127,17 @@ export const AdminSidebar = ({
           }`}
         >
           <img
-            src={admin?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80'}
+            src={admin?.avatar || '/favicon.svg'}
             alt={admin?.name || 'Admin'}
             className="h-9 w-9 shrink-0 rounded-lg object-cover ring-2 ring-indigo-500/30"
           />
           {!isCollapsed && (
             <div className="flex flex-1 flex-col overflow-hidden">
               <span className="truncate text-xs font-semibold text-white">
-                {admin?.name || 'Vikky Podiyam'}
+                {admin?.name || 'Administrator'}
               </span>
               <span className="truncate text-[10px] text-indigo-400 font-medium">
-                {role || 'Super Admin'}
+                {role || 'Admin'}
               </span>
             </div>
           )}

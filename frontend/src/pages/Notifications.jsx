@@ -1,6 +1,19 @@
-﻿import React, { useMemo, useState } from 'react';
-import { Link, NavLink, Route, Routes, useLocation, useNavigate, useParams } from 'react-router-dom';
-import { Activity, ArrowDownUp, ArrowLeft, ArrowRight, Bell, Bookmark, CalendarDays, Check, ChevronDown, ChevronRight, CircleHelp, Compass, Hash, Heart, Home, LogOut, Menu, MessageCircle, MessageSquare, MoreHorizontal, Plus, Search, Send, Settings, Sparkles, ThumbsUp, Users, X, Zap } from 'lucide-react';
+import React from 'react';
+import { Bell, CalendarDays, Check, Heart, MessageCircle, X } from 'lucide-react';
 import { useApp } from '../state.jsx';
-import { Avatar, Button, Empty, FilterBar, PageHead, QuestionCard, DiscussionCard, SessionCard, SectionHead, Stat, Tag, cats } from '../components/common/index.jsx';
-export default function Notifications(){const{data,update,notify}=useApp();const unread=data.notifications.filter(n=>!n.read).length;return <><PageHead eyebrow="STAY IN THE LOOP" title="Notifications" sub="The latest activity from your learning community." action={unread>0&&<Button kind="outline" onClick={()=>{update('notifications',ns=>ns.map(n=>({...n,read:true})));notify('All caught up!');}}><Check size={15}/>Mark all as read</Button>}/><div className="notification-summary"><span className="summary-icon"><Bell size={18}/></span><div><b>{unread?`${unread} unread notifications`:'You are all caught up'}</b><small>Here is what has been happening.</small></div><span className="summary-count">{unread}</span></div><div className="notification-list">{data.notifications.map(n=><div className={`notification-row ${!n.read?'unread':''}`} key={n.id}><span className={`notification-icon notif-${n.icon}`}>{n.icon==='message'?<MessageCircle size={17}/>:n.icon==='heart'?<Heart size={17}/>:<CalendarDays size={17}/>}</span><div className="notification-copy"><b>{n.title}</b><p>{n.detail}</p><small>{n.time}</small></div><div className="notification-actions">{!n.read&&<button onClick={()=>{update('notifications',ns=>ns.map(x=>x.id===n.id?{...x,read:true}:x));notify('Marked as read');}} title="Mark as read"><Check size={16}/></button>}<button onClick={()=>update('notifications',ns=>ns.filter(x=>x.id!==n.id))} title="Delete"><X size={16}/></button></div></div>)}</div></>;}
+import { Button, PageHead } from '../components/common/index.jsx';
+
+export default function Notifications() {
+  const { data, mutate, notify } = useApp();
+  const unread = data.notifications.filter(item => !item.read).length;
+  async function act(action, values = {}, message) {
+    try { await mutate('notifications', action, values); if (message) notify(message); }
+    catch (error) { notify(error.message); }
+  }
+
+  return <>
+    <PageHead eyebrow="STAY IN THE LOOP" title="Notifications" sub="The latest activity from your learning community." action={unread > 0 && <Button kind="outline" onClick={() => act('markAllRead', {}, 'All caught up!')}><Check size={15}/>Mark all as read</Button>}/>
+    <div className="notification-summary"><span className="summary-icon"><Bell size={18}/></span><div><b>{unread ? `${unread} unread notifications` : 'You are all caught up'}</b><small>Here is what has been happening.</small></div><span className="summary-count">{unread}</span></div>
+    <div className="notification-list">{data.notifications.map(item => <div className={`notification-row ${!item.read ? 'unread' : ''}`} key={item.id}><span className={`notification-icon notif-${item.icon}`}>{item.icon === 'message' ? <MessageCircle size={17}/> : item.icon === 'heart' ? <Heart size={17}/> : <CalendarDays size={17}/>}</span><div className="notification-copy"><b>{item.title}</b><p>{item.detail}</p><small>{item.time}</small></div><div className="notification-actions">{!item.read && <button onClick={() => act('markRead', { id: item.id }, 'Marked as read')} title="Mark as read"><Check size={16}/></button>}<button onClick={() => act('delete', { id: item.id })} title="Delete"><X size={16}/></button></div></div>)}</div>
+  </>;
+}

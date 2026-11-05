@@ -10,7 +10,7 @@ export const AdminLayout = () => {
   const [isMobileOpen, setIsMobileOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-800 dark:bg-slate-950 dark:text-slate-100 flex flex-col antialiased transition-colors duration-200">
+    <div className="admin-shell min-h-screen bg-[#f7f8fc] text-[#24253b] dark:bg-slate-950 dark:text-slate-100 flex flex-col antialiased transition-colors duration-200">
       {/* Toast Notification Provider */}
       <Toaster
         position="top-right"

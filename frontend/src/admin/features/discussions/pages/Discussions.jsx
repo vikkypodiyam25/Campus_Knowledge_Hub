@@ -27,9 +27,9 @@ export const Discussions = () => {
   const [selectedForEdit, setSelectedForEdit] = useState(null);
   const [selectedForDelete, setSelectedForDelete] = useState(null);
 
-  const fetchDiscussions = () => {
+  const fetchDiscussions = async () => {
     try {
-      const data = discussionService.getAll();
+      const data = await discussionService.getAll();
       setDiscussions(data);
     } catch {
       toast.error('Failed to load discussions');
@@ -107,34 +107,34 @@ export const Discussions = () => {
   const totalPages = Math.ceil(filteredDiscussions.length / pageSize) || 1;
 
   // Actions
-  const handleTogglePin = (id) => {
-    const updated = discussionService.togglePin(id);
+  const handleTogglePin = async (id) => {
+    const updated = await discussionService.togglePin(id);
     if (updated) {
       toast.success(updated.isPinned ? 'Discussion pinned to top' : 'Discussion unpinned');
       fetchDiscussions();
     }
   };
 
-  const handleToggleHide = (id) => {
-    const updated = discussionService.toggleHide(id);
+  const handleToggleHide = async (id) => {
+    const updated = await discussionService.toggleHide(id);
     if (updated) {
       toast.success(updated.isHidden ? 'Discussion hidden from feeds' : 'Discussion unhidden');
       fetchDiscussions();
     }
   };
 
-  const handleEditSave = (data) => {
+  const handleEditSave = async (data) => {
     if (!selectedForEdit) return;
-    const updated = discussionService.update(selectedForEdit.id, data);
+    const updated = await discussionService.update(selectedForEdit.id, data);
     if (updated) {
       toast.success('Discussion thread updated');
       fetchDiscussions();
     }
   };
 
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = async () => {
     if (!selectedForDelete) return;
-    discussionService.delete(selectedForDelete.id);
+    await discussionService.delete(selectedForDelete.id);
     toast.success('Discussion deleted permanently');
     setSelectedForDelete(null);
     fetchDiscussions();

@@ -4,3 +4,7 @@ node_modules/
 
 # Production build
 dist/
+.env
+backend/data/*.sqlite
+backend/data/*.sqlite-shm
+backend/data/*.sqlite-wal

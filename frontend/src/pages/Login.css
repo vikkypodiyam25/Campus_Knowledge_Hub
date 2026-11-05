@@ -31,6 +31,10 @@
 .login-heading p { margin: 0 0 4px; color: #effaffd9; font-size: 8px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; text-shadow: 0 1px 6px #102c3c91; }
 .login-heading h1 { margin: 0; color: #fff; font: 800 24px Manrope,sans-serif; text-shadow: 0 2px 9px #102c3c91; }
 .login-form { display: grid; gap: 13px; }
+.google-auth { display: grid; justify-items: center; gap: 5px; margin: 0 0 2px; }
+.google-button { min-height: 42px; display: grid; place-items: center; }
+.google-auth p,.google-config-note { margin: 0; color: #effaffd9; font-size: 9px; text-align: center; text-shadow: 0 1px 5px #18364478; }
+.google-config-note { margin: 0 0 2px; }
 .login-field { min-height: 43px; display: flex; align-items: center; gap: 10px; padding: 0 13px; border: 1px solid #ecf8ff75; border-radius: 999px; color: #f1fbff; background: #e7f8ff20; box-shadow: inset 0 1px 3px #102e3a24; }
 .login-field:focus-within { border-color: #fff; background: #e7f8ff30; box-shadow: 0 0 0 3px #f4fbff2a; }
 .login-field>svg { flex: 0 0 auto; opacity: .9; }

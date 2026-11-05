@@ -2,6 +2,90 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Keep the admin workspace in the same visual system as the student app. */
+.admin-shell { font-family: 'DM Sans', sans-serif; --admin-purple: #7561e8; --admin-line: #ececf3; }
+.admin-shell h1,.admin-shell h2,.admin-shell h3,.admin-shell h4 { font-family: 'Manrope', sans-serif; letter-spacing: -.025em; }
+.admin-shell:not(.dark) { background: #f7f8fc; color: #24253b; }
+.admin-shell aside > div:first-child,
+.admin-shell aside .bg-slate-900 { background: #fff !important; color: #73748c !important; border-color: #ececf3 !important; }
+.admin-shell aside .border-slate-800,
+.admin-shell aside .border-slate-800\/80 { border-color: #ececf3 !important; }
+.admin-shell aside .text-slate-300,
+.admin-shell aside .text-slate-400 { color: #85869b !important; }
+.admin-shell aside .text-white { color: #292940 !important; }
+.admin-shell aside .text-indigo-400 { color: #7561e8 !important; }
+.admin-shell aside .bg-indigo-600 { background: #f1efff !important; color: #6856db !important; box-shadow: none !important; }
+.admin-shell aside .hover\:bg-slate-800\/80:hover,
+.admin-shell aside .hover\:bg-slate-800:hover { background: #faf9ff !important; color: #6856db !important; }
+.admin-shell aside .bg-slate-800\/40 { background: #f8f8fb !important; }
+.admin-shell aside .ring-indigo-500\/30 { --tw-ring-color: #7561e844 !important; }
+.admin-shell header { background: rgb(255 255 255 / 92%); border-color: #ececf3; }
+.admin-shell main { max-width: 1280px; }
+.admin-shell main .rounded-2xl { border-radius: 11px; }
+.admin-shell main .shadow-card { box-shadow: 0 2px 10px rgb(31 33 70 / 3.5%); }
+.admin-shell main .border-slate-200\/80 { border-color: #ececf3; }
+.admin-shell main .bg-white { background: #fff; }
+.admin-shell footer { background: transparent; border-color: #ececf3; }
+.admin-shell .admin-dashboard-hero { background: linear-gradient(108deg,#eeeaff,#e5e7ff); color: #292847; border: 1px solid #e7e2ff; box-shadow: none; }
+.admin-shell .admin-dashboard-hero h1 { color: #292847; text-shadow: none; }
+.admin-shell .admin-dashboard-hero p { color: #76748f; }
+.admin-shell .admin-dashboard-hero button { color: #6856db; border-color: #ded9ff; background: #ffffffb8; box-shadow: none; }
+.admin-shell .admin-dashboard-hero button:hover { background: #fff; }
+.dark .admin-shell { background: #191a20 !important; color: #e8e7ec; }
+.dark .admin-shell aside > div:first-child,
+.dark .admin-shell aside .bg-slate-900 { background: #202127 !important; color: #c9c8d0 !important; border-color: #303138 !important; }
+.dark .admin-shell aside .border-slate-800,
+.dark .admin-shell aside .border-slate-800\/80 { border-color: #303138 !important; }
+.dark .admin-shell aside .border-slate-800 { border-color: #303138 !important; }
+.dark .admin-shell aside .text-white { color: #fff !important; }
+.dark .admin-shell aside .bg-indigo-600 { background: #393444 !important; color: #e8dcff !important; box-shadow: inset 0 0 0 1px #564c64 !important; }
+.dark .admin-shell aside .hover\:bg-slate-800\/80:hover,
+.dark .admin-shell aside .hover\:bg-slate-800:hover { background: #2c2d34 !important; color: #e8dcff !important; }
+.dark .admin-shell aside .bg-slate-800\/40 { background: #292a30 !important; }
+.dark .admin-shell header { background: rgb(32 33 39 / 94%); border-color: #303138; }
+.dark .admin-shell main .border-slate-200\/80 { border-color: #34353d; }
+.dark .admin-shell main .bg-white { background: #23242b; }
+.dark .admin-shell main .bg-slate-50 { background: #292a31; }
+.dark .admin-shell main .text-slate-900 { color: #f0eff4; }
+.dark .admin-shell main .text-slate-800 { color: #e3e2e8; }
+.dark .admin-shell main .text-slate-700 { color: #cac9d1; }
+.dark .admin-shell .admin-dashboard-hero { background: linear-gradient(108deg,#29282f,#303039); border-color: #3a3942; color: #fff; }
+.dark .admin-shell .admin-dashboard-hero h1 { color: #fff; }
+.dark .admin-shell .admin-dashboard-hero p { color: #c8c6d0; }
+.dark .admin-shell {
+  background-color: #17181d !important;
+  background-image: radial-gradient(ellipse at 78% 0%, rgb(112 86 147 / 12%), transparent 34%), radial-gradient(ellipse at 7% 52%, rgb(124 106 149 / 7%), transparent 30%) !important;
+}
+.dark .admin-shell aside > div:first-child { box-shadow: 14px 0 40px rgb(0 0 0 / 12%); }
+.dark .admin-shell aside .bg-gradient-to-tr { background-image: linear-gradient(145deg,#8270a3,#5b5369) !important; box-shadow: 0 5px 18px rgb(118 95 148 / 22%); }
+.dark .admin-shell aside a[aria-current="page"] { border: 1px solid rgb(192 168 220 / 18%); background-image: linear-gradient(100deg,#393441,#302e36) !important; box-shadow: 0 4px 16px rgb(0 0 0 / 14%) !important; }
+.dark .admin-shell header { box-shadow: 0 1px 0 rgb(255 255 255 / 2%),0 12px 32px rgb(0 0 0 / 10%); -webkit-backdrop-filter: blur(18px) saturate(130%); backdrop-filter: blur(18px) saturate(130%); }
+.dark .admin-shell main > div > section[aria-label="Admin shortcuts"] > a,
+.dark .admin-shell main .shadow-card { border-color: #34343c; background-image: linear-gradient(145deg,#25262d,#222329); box-shadow: 0 8px 24px rgb(0 0 0 / 14%),inset 0 1px 0 rgb(255 255 255 / 3%); }
+.dark .admin-shell main > div > section[aria-label="Admin shortcuts"] > a { position: relative; overflow: hidden; transition: transform .22s ease,border-color .22s ease,box-shadow .22s ease; }
+.dark .admin-shell main > div > section[aria-label="Admin shortcuts"] > a::before { content: ''; position: absolute; inset: 0; pointer-events: none; opacity: 0; background: radial-gradient(260px circle at var(--pointer-x,50%) var(--pointer-y,0%),rgb(185 160 220 / 9%),transparent 72%); transition: opacity .2s ease; }
+.dark .admin-shell main > div > section[aria-label="Admin shortcuts"] > a:hover { transform: translateY(-3px); border-color: #554b60; box-shadow: 0 14px 30px rgb(0 0 0 / 24%),inset 0 1px 0 rgb(255 255 255 / 4%); }
+.dark .admin-shell main > div > section[aria-label="Admin shortcuts"] > a:hover::before { opacity: 1; }
+.dark .admin-shell .admin-dashboard-hero { position: relative; isolation: isolate; overflow: hidden; background: linear-gradient(112deg,#26252c 4%,#302d38 57%,#24242b) !important; border-color: #403b48; box-shadow: 0 18px 42px rgb(0 0 0 / 20%),inset 0 1px 0 rgb(255 255 255 / 5%); }
+.dark .admin-shell .admin-dashboard-hero::after { content: ''; position: absolute; z-index: -1; width: 410px; height: 260px; right: 7%; top: -150px; border-radius: 50%; background: #a58cc421; filter: blur(58px); }
+.dark .admin-shell .admin-dashboard-hero button { border-color: #514b5b; background: rgb(255 255 255 / 5%); color: #eeeaf4; transition: transform .2s ease,background .2s ease,border-color .2s ease; }
+.dark .admin-shell .admin-dashboard-hero button:hover { transform: translateY(-2px); border-color: #746781; background: rgb(255 255 255 / 9%); }
+.dark .admin-shell .admin-dashboard-hero button:last-child { border-color: transparent; background-image: linear-gradient(135deg,#82709e,#665c78); box-shadow: 0 7px 20px rgb(104 86 128 / 24%); }
+.dark .admin-shell main .rounded-2xl { border-radius: 14px; }
+.dark .admin-shell main .border-slate-200\/80 { border-color: #34343c; }
+.dark .admin-shell main .hover\:border-indigo-200:hover { border-color: #675879; }
+.dark .admin-shell main .dark\:hover\:border-indigo-800:hover { border-color: #675879; }
+.dark .admin-shell main .text-indigo-600,.dark .admin-shell main .dark\:text-indigo-400 { color: #c3afd9; }
+.dark .admin-shell main .bg-indigo-50,.dark .admin-shell main .bg-violet-50,.dark .admin-shell main .bg-blue-50,.dark .admin-shell main .bg-cyan-50 { background: #34313b; }
+.dark .admin-shell main .dark\:bg-indigo-950\/50,.dark .admin-shell main .dark\:bg-blue-950\/50,.dark .admin-shell main .dark\:bg-violet-950\/50,.dark .admin-shell main .dark\:bg-cyan-950\/50 { background: #34313b; }
+.admin-shell main .shadow-card { transition: box-shadow .2s ease,border-color .2s ease,transform .2s ease; }
+.admin-shell main .shadow-card:hover { border-color: #d9d3f2; box-shadow: 0 10px 26px rgb(39 32 75 / 8%); }
+.dark .admin-shell main .shadow-card:hover { border-color: #4a4652; box-shadow: 0 12px 28px rgb(0 0 0 / 22%); }
+.dark .admin-shell .admin-dashboard-hero { animation: admin-hero-in .55s cubic-bezier(.2,.75,.25,1) both; }
+@keyframes admin-hero-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+@media (prefers-reduced-motion: reduce) { .dark .admin-shell .admin-dashboard-hero,.admin-shell main .shadow-card,.dark .admin-shell main > div > section[aria-label="Admin shortcuts"] > a { animation: none; transition: none; } }
+@media (max-width: 640px) { .admin-shell main { padding: 20px 16px 32px; } }
+
 .admin-login-page {
   min-height: 100vh;
   min-height: 100svh;

@@ -52,11 +52,11 @@ export const RecentActivity = ({ recentData }) => {
           </div>
 
           <div className="divide-y divide-slate-100 dark:divide-slate-800/80 mt-2">
-            {recentStudents.map((student) => (
+            {recentStudents.length === 0 ? <p className="py-4 text-center text-xs text-slate-400">No student accounts yet.</p> : recentStudents.map((student) => (
               <div key={student.id} className="py-3 flex items-center justify-between gap-3">
                 <div className="flex items-center gap-3 min-w-0">
                   <img
-                    src={student.avatar}
+                    src={student.avatar || '/favicon.svg'}
                     alt={student.name}
                     className="w-9 h-9 rounded-full object-cover shrink-0 ring-1 ring-slate-200 dark:ring-slate-700"
                   />
@@ -102,7 +102,7 @@ export const RecentActivity = ({ recentData }) => {
           </div>
 
           <div className="divide-y divide-slate-100 dark:divide-slate-800/80 mt-2">
-            {latestQuestions.map((q) => (
+            {latestQuestions.length === 0 ? <p className="py-4 text-center text-xs text-slate-400">No questions yet.</p> : latestQuestions.map((q) => (
               <div key={q.id} className="py-3 flex flex-col gap-1.5">
                 <div className="flex items-start justify-between gap-2">
                   <Link
@@ -126,7 +126,6 @@ export const RecentActivity = ({ recentData }) => {
         </div>
       </div>
 
-      {/* 3-Column Grid: Discussions, Upcoming Sessions, and Pending Reports */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {/* Recent Discussions */}
         <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-card dark:border-slate-800 dark:bg-slate-900">
@@ -146,7 +145,7 @@ export const RecentActivity = ({ recentData }) => {
           </div>
 
           <div className="space-y-3 mt-3">
-            {recentDiscussions.slice(0, 3).map((disc) => (
+            {recentDiscussions.length === 0 ? <p className="py-4 text-center text-xs text-slate-400">No discussions yet.</p> : recentDiscussions.slice(0, 3).map((disc) => (
               <div
                 key={disc.id}
                 className="rounded-xl p-3 bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-100/70 dark:hover:bg-slate-800 transition-colors"
@@ -211,9 +210,9 @@ export const RecentActivity = ({ recentData }) => {
         <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-card dark:border-slate-800 dark:bg-slate-900">
           <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
             <div className="flex items-center gap-2">
-              <ShieldAlert className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                <ShieldAlert className="w-4 h-4 text-amber-600 dark:text-amber-400" />
               <h4 className="text-sm font-semibold text-slate-900 dark:text-white">
-                Pending Moderation Reports
+                Reports (not configured)
               </h4>
             </div>
             <Link
@@ -226,7 +225,7 @@ export const RecentActivity = ({ recentData }) => {
 
           <div className="space-y-3 mt-3">
             {pendingReports.length === 0 ? (
-              <p className="text-xs text-slate-400 py-4 text-center">No pending flags 🎉</p>
+              <p className="text-xs text-slate-400 py-4 text-center">Report intake is not configured yet.</p>
             ) : (
               pendingReports.slice(0, 3).map((rep) => (
                 <div
@@ -260,16 +259,16 @@ export const RecentActivity = ({ recentData }) => {
           </div>
           <div>
             <h4 className="text-sm font-semibold text-slate-900 dark:text-white">
-              Recent Admin Activity Log
+              Recent Admin Activity
             </h4>
             <p className="text-xs text-slate-400">
-              Audited administrative actions and operations
+              Activity logging is not configured yet.
             </p>
           </div>
         </div>
 
         <div className="mt-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-          {recentActivities.map((act) => (
+          {recentActivities.length === 0 ? <p className="col-span-full py-4 text-center text-xs text-slate-400">Activity logging is not configured yet.</p> : recentActivities.map((act) => (
             <div
               key={act.id}
               className="flex items-start gap-3 rounded-xl border border-slate-100 dark:border-slate-800/60 p-3 bg-slate-50/50 dark:bg-slate-800/30"

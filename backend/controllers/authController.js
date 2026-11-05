@@ -1,186 +1,168 @@
-const User = require("../models/user");
-const jwt = require("jsonwebtoken");
+const crypto = require('node:crypto');
+const { db, withTransaction } = require('../config/db');
+const { send, fail, readBody } = require('../utils/http');
+const service = require('../services/appService');
 
-const createToken = (userId) => {
-    return jwt.sign(
-        { id: userId },
-        process.env.JWT_SECRET,
-        { expiresIn: process.env.JWT_EXPIRES_IN || "1d" }
-    );
-};
+const isProduction = process.env.NODE_ENV === 'production';
+const authPaths = new Set([
+  '/api/auth/register', '/api/auth/login', '/api/auth/google', '/api/auth/me', '/api/auth/logout',
+  '/api/auth/forgot-password', '/api/auth/reset-password',
+  '/api/admin/auth/login', '/api/admin/auth/me', '/api/admin/auth/logout',
+]);
 
-const setTokenCookie = (res, token) => {
-    res.cookie("token", token, {
-        httpOnly: true,
-        secure: process.env.COOKIE_SECURE === "true",
-        sameSite: "lax",
-        maxAge: 24 * 60 * 60 * 1000
+async function handle(req, res, url) {
+  const { method } = req;
+  const { pathname } = url;
+
+  if (method === 'POST' && pathname === '/api/auth/register') {
+    const body = await readBody(req);
+    const name = String(body.name || '').trim();
+    const email = service.normalizeEmail(body.email);
+    const password = String(body.password || '');
+    if (!name || !email || !password) return fail(res, 400, 'Name, email and password are required.');
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return fail(res, 400, 'Enter a valid email address.');
+    if (password.length < 8) return fail(res, 400, 'Password must contain at least 8 characters.');
+    if (db.prepare('SELECT 1 FROM users WHERE email=?').get(email) || db.prepare('SELECT 1 FROM admins WHERE email=?').get(email)) return fail(res, 409, 'An account with this email already exists.');
+    const baseUsername = String(body.username || email.split('@')[0]).toLowerCase().replace(/[^a-z0-9_.-]/g, '').slice(0, 30) || 'learner';
+    let username = baseUsername;
+    for (let suffix = 2; db.prepare('SELECT 1 FROM users WHERE username=?').get(username); suffix += 1) username = `${baseUsername.slice(0, 25)}${suffix}`;
+    const id = crypto.randomUUID();
+    const now = new Date().toISOString();
+    const { salt, hash } = await service.makePassword(password);
+    const safeInitialState = body.initialState && typeof body.initialState === 'object' && !Array.isArray(body.initialState) ? body.initialState : null;
+    const profile = { ...(safeInitialState?.profile && typeof safeInitialState.profile === 'object' && !Array.isArray(safeInitialState.profile) ? safeInitialState.profile : {}), name, username: `@${username}`, role: 'Student' };
+    withTransaction(() => {
+      db.prepare('INSERT INTO users(id,name,username,email,password_hash,password_salt,role,status,profile,created_at) VALUES(?,?,?,?,?,?,?,?,?,?)')
+        .run(id, name, username, email, hash, salt, 'student', 'active', JSON.stringify(profile), now);
+      if (safeInitialState) {
+        const initialData = {
+          profile,
+          questions: Array.isArray(safeInitialState.questions) ? safeInitialState.questions : [],
+          discussions: Array.isArray(safeInitialState.discussions) ? safeInitialState.discussions : [],
+          sessions: Array.isArray(safeInitialState.sessions) ? safeInitialState.sessions : [],
+          notifications: Array.isArray(safeInitialState.notifications) ? safeInitialState.notifications : [],
+          preferences: safeInitialState.preferences && typeof safeInitialState.preferences === 'object' && !Array.isArray(safeInitialState.preferences) ? safeInitialState.preferences : {},
+        };
+        db.prepare('INSERT INTO user_states(user_id,data,updated_at) VALUES(?,?,?)').run(id, JSON.stringify(initialData), now);
+      }
     });
-};
+    return send(res, 201, { success: true, message: 'Account created. Please sign in.', data: { id, name, username: `@${username}`, email, role: 'student' } });
+  }
 
-// Register
-const register = async (req, res) => {
+  if (method === 'POST' && pathname === '/api/auth/login') {
+    const body = await readBody(req);
+    const user = db.prepare('SELECT * FROM users WHERE email=?').get(service.normalizeEmail(body.email));
+    if (!user || !(await service.matchesPassword(String(body.password || ''), user.password_salt, user.password_hash))) return fail(res, 401, 'Email or password is incorrect.');
+    if (user.status !== 'active') return fail(res, 403, 'Your account is not active.');
+    const session = service.makeSession({ userId: user.id, role: user.role });
+    return send(res, 200, { success: true, message: 'Login successful.', data: { user: service.publicUser(user), ...session } });
+  }
+
+  if (method === 'POST' && pathname === '/api/auth/google') {
+    const clientId = String(process.env.GOOGLE_CLIENT_ID || '').trim();
+    if (!clientId) return fail(res, 503, 'Google sign-in is not configured. Set GOOGLE_CLIENT_ID in backend/.env and VITE_GOOGLE_CLIENT_ID in frontend/.env.');
+    const credential = String((await readBody(req)).credential || '');
+    if (!credential || credential.length > 10000) return fail(res, 400, 'Google sign-in credential is missing or invalid.');
+    let googleUser;
     try {
-        const { name, username, email, password } = req.body;
-
-        if (!name || !username || !email || !password) {
-            return res.status(400).json({
-                success: false,
-                message: "All fields are required"
-            });
-        }
-
-        if (password.length < 8) {
-            return res.status(400).json({
-                success: false,
-                message: "Password must contain at least 8 characters"
-            });
-        }
-
-        const existingUser = await User.findOne({
-            $or: [
-                { email: email.toLowerCase() },
-                { username: username.toLowerCase() }
-            ]
-        });
-
-        if (existingUser) {
-            return res.status(409).json({
-                success: false,
-                message: "Email or username already exists"
-            });
-        }
-
-        const user = new User({
-            name,
-            username,
-            email,
-            password,
-            role: "student"
-        });
-
-        await user.save();
-
-        const token = createToken(user._id);
-
-        setTokenCookie(res, token);
-
-        res.status(201).json({
-            success: true,
-            message: "Registration successful",
-            data: {
-                id: user._id,
-                name: user.name,
-                username: user.username,
-                email: user.email,
-                role: user.role
-            }
-        });
-
-    } catch (error) {
-        res.status(500).json({
-            success: false,
-            message: "Registration failed"
-        });
+      const response = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(credential)}`);
+      if (!response.ok) return fail(res, 401, 'Google could not verify this sign-in. Please try again.');
+      googleUser = await response.json();
+    } catch {
+      return fail(res, 503, 'Could not reach Google to verify sign-in. Please try again.');
     }
-};
-
-// Login
-const login = async (req, res) => {
-    try {
-        const { email, password } = req.body;
-
-        if (!email || !password) {
-            return res.status(400).json({
-                success: false,
-                message: "Email and password are required"
-            });
-        }
-
-        const user = await User.findOne({
-            email: email.toLowerCase()
-        }).select("+password");
-
-        if (!user || !(await user.comparePassword(password))) {
-            return res.status(401).json({
-                success: false,
-                message: "Invalid email or password"
-            });
-        }
-
-        if (user.status !== "active") {
-            return res.status(403).json({
-                success: false,
-                message: "Your account is not active"
-            });
-        }
-
-        const token = createToken(user._id);
-
-        setTokenCookie(res, token);
-
-        res.status(200).json({
-            success: true,
-            message: "Login successful",
-            data: {
-                id: user._id,
-                name: user.name,
-                username: user.username,
-                email: user.email,
-                role: user.role
-            }
-        });
-
-    } catch (error) {
-        res.status(500).json({
-            success: false,
-            message: "Login failed"
-        });
+    if (googleUser.aud !== clientId || googleUser.email_verified !== 'true' || !googleUser.sub || !googleUser.email) return fail(res, 401, 'Google account verification failed.');
+    const email = service.normalizeEmail(googleUser.email);
+    if (db.prepare('SELECT 1 FROM admins WHERE email=?').get(email)) return fail(res, 403, 'Use the administrator sign-in page for this account.');
+    let user = db.prepare('SELECT * FROM users WHERE email=?').get(email);
+    if (user && user.status !== 'active') return fail(res, 403, 'Your account is not active.');
+    if (!user) {
+      const baseUsername = String(email.split('@')[0]).toLowerCase().replace(/[^a-z0-9_.-]/g, '').slice(0, 30) || 'learner';
+      let username = baseUsername;
+      for (let suffix = 2; db.prepare('SELECT 1 FROM users WHERE username=?').get(username); suffix += 1) username = `${baseUsername.slice(0, 25)}${suffix}`;
+      const id = crypto.randomUUID();
+      const name = String(googleUser.name || email.split('@')[0]).trim().slice(0, 80) || 'Learner';
+      const now = new Date().toISOString();
+      const profile = { name, username: `@${username}`, role: 'Student', avatar: String(googleUser.picture || '').slice(0, 1000), bio: '', skills: [], interests: [] };
+      withTransaction(() => {
+        db.prepare('INSERT INTO users(id,name,username,email,password_hash,password_salt,role,status,profile,created_at) VALUES(?,?,?,?,?,?,?,?,?,?)')
+          .run(id, name, username, email, '', '', 'student', 'active', JSON.stringify(profile), now);
+        db.prepare('INSERT INTO user_states(user_id,data,updated_at) VALUES(?,?,?)')
+          .run(id, JSON.stringify({ profile, questions: [], discussions: [], sessions: [], notifications: [], preferences: {} }), now);
+      });
+      user = db.prepare('SELECT * FROM users WHERE id=?').get(id);
     }
-};
+    const session = service.makeSession({ userId: user.id, role: user.role });
+    return send(res, 200, { success: true, message: 'Google sign-in successful.', data: { user: service.publicUser(user), ...session } });
+  }
 
-// Logout
-const logout = (req, res) => {
-    res.clearCookie("token", {
-        httpOnly: true,
-        secure: process.env.COOKIE_SECURE === "true",
-        sameSite: "lax"
+  if (method === 'GET' && pathname === '/api/auth/me') {
+    const auth = service.requireSession(req, 'user');
+    if (!auth) return fail(res, 401, 'Please sign in to continue.');
+    const user = db.prepare('SELECT * FROM users WHERE id=?').get(auth.session.user_id);
+    return send(res, 200, { success: true, data: { user: service.publicUser(user), expiresAt: new Date(auth.session.expires_at).toISOString() } });
+  }
+
+  if (method === 'POST' && pathname === '/api/auth/logout') {
+    const token = (req.headers.authorization || '').replace(/^Bearer\s+/, '');
+    if (token) db.prepare('DELETE FROM sessions WHERE token_hash=?').run(service.digest(token));
+    return send(res, 200, { success: true, message: 'Signed out.' });
+  }
+
+  if (method === 'POST' && pathname === '/api/auth/forgot-password') {
+    const email = service.normalizeEmail((await readBody(req)).email);
+    if (db.prepare('SELECT 1 FROM admins WHERE email=?').get(email)) return fail(res, 400, 'Admin password recovery must be handled by your system administrator.');
+    if (!db.prepare('SELECT 1 FROM users WHERE email=?').get(email)) return fail(res, 404, 'No account found for this email.');
+    if (isProduction) return fail(res, 503, 'Email delivery is not configured on this server.');
+    const code = String(crypto.randomInt(0, 1_000_000)).padStart(6, '0');
+    const expiresAt = Date.now() + 5 * 60 * 1000;
+    db.prepare('INSERT INTO password_resets(email,code_hash,expires_at) VALUES(?,?,?) ON CONFLICT(email) DO UPDATE SET code_hash=excluded.code_hash, expires_at=excluded.expires_at')
+      .run(email, service.digest(code), expiresAt);
+    return send(res, 200, { success: true, message: 'A reset code was created.', data: { demoCode: code, expiresAt: new Date(expiresAt).toISOString() } });
+  }
+
+  if (method === 'POST' && pathname === '/api/auth/reset-password') {
+    const body = await readBody(req);
+    const email = service.normalizeEmail(body.email);
+    const code = String(body.code || '');
+    const password = String(body.password || '');
+    if (password.length < 8) return fail(res, 400, 'Password must contain at least 8 characters.');
+    const reset = db.prepare('SELECT * FROM password_resets WHERE email=?').get(email);
+    const codeMatches = reset && crypto.timingSafeEqual(Buffer.from(reset.code_hash, 'hex'), Buffer.from(service.digest(code), 'hex'));
+    if (!reset || reset.expires_at < Date.now() || !codeMatches) return fail(res, 400, 'Reset code is invalid or expired.');
+    const user = db.prepare('SELECT id FROM users WHERE email=?').get(email);
+    if (!user) return fail(res, 404, 'Account not found.');
+    const { salt, hash } = await service.makePassword(password);
+    withTransaction(() => {
+      db.prepare('UPDATE users SET password_hash=?, password_salt=? WHERE id=?').run(hash, salt, user.id);
+      db.prepare('DELETE FROM password_resets WHERE email=?').run(email);
+      db.prepare('DELETE FROM sessions WHERE user_id=?').run(user.id);
     });
+    return send(res, 200, { success: true, message: 'Password updated. Please sign in again.' });
+  }
 
-    res.status(200).json({
-        success: true,
-        message: "Logout successful"
-    });
-};
+  if (method === 'POST' && pathname === '/api/admin/auth/login') {
+    const body = await readBody(req);
+    const admin = db.prepare('SELECT * FROM admins WHERE email=?').get(service.normalizeEmail(body.email));
+    if (!admin || !(await service.matchesPassword(String(body.password || ''), admin.password_salt, admin.password_hash))) return fail(res, 401, 'Admin email or password is incorrect.');
+    const session = service.makeSession({ adminEmail: admin.email, role: admin.role });
+    return send(res, 200, { success: true, message: 'Admin sign-in successful.', data: { admin: service.publicAdmin(admin), ...session } });
+  }
 
-// Get logged-in user
-const getMe = async (req, res) => {
-    try {
-        const user = await User.findById(req.user.id);
+  if (method === 'GET' && pathname === '/api/admin/auth/me') {
+    const auth = service.requireSession(req, 'admin');
+    if (!auth) return fail(res, 401, 'Admin sign-in required.');
+    const admin = db.prepare('SELECT * FROM admins WHERE email=?').get(auth.session.admin_email);
+    return send(res, 200, { success: true, data: { admin: service.publicAdmin(admin), expiresAt: new Date(auth.session.expires_at).toISOString() } });
+  }
 
-        if (!user) {
-            return res.status(404).json({
-                success: false,
-                message: "User not found"
-            });
-        }
+  if (method === 'POST' && pathname === '/api/admin/auth/logout') {
+    const token = (req.headers.authorization || '').replace(/^Bearer\s+/, '');
+    if (token) db.prepare('DELETE FROM sessions WHERE token_hash=? AND admin_email IS NOT NULL').run(service.digest(token));
+    return send(res, 200, { success: true, message: 'Admin signed out.' });
+  }
 
-        res.status(200).json({
-            success: true,
-            data: user
-        });
+  return fail(res, 404, 'Authentication route not found.');
+}
 
-    } catch (error) {
-        res.status(500).json({
-            success: false,
-            message: "Could not fetch user"
-        });
-    }
-};
-
-module.exports = {
-    register,
-    login,
-    logout,
-    getMe
-};
+module.exports = { matches: pathname => authPaths.has(pathname), handle };

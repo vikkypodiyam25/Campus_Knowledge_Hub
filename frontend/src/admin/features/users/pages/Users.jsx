@@ -7,7 +7,7 @@ import UserEditModal from '../components/UserEditModal';
 import Pagination from '../../../components/common/Pagination';
 import ConfirmDialog from '../../../components/common/ConfirmDialog';
 import Button from '../../../components/common/Button';
-import { UserPlus, Download } from 'lucide-react';
+import { Download } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export const Users = () => {
@@ -29,17 +29,15 @@ export const Users = () => {
     handleUpdateStatus,
     handleDeleteUser,
     handleUpdateUser,
-    handleCreateUser,
   } = useUsers();
 
   const [selectedUserForView, setSelectedUserForView] = useState(null);
   const [selectedUserForEdit, setSelectedUserForEdit] = useState(null);
   const [selectedUserForDelete, setSelectedUserForDelete] = useState(null);
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = async () => {
     if (!selectedUserForDelete) return;
-    handleDeleteUser(selectedUserForDelete.id);
+    await handleDeleteUser(selectedUserForDelete.id);
     setSelectedUserForDelete(null);
   };
 
@@ -82,14 +80,6 @@ export const Users = () => {
             Export CSV
           </Button>
 
-          <Button
-            variant="primary"
-            size="md"
-            leftIcon={UserPlus}
-            onClick={() => setIsAddModalOpen(true)}
-          >
-            Add Student
-          </Button>
         </div>
       </div>
 
@@ -140,13 +130,6 @@ export const Users = () => {
         onSave={(data) => handleUpdateUser(selectedUserForEdit.id, data)}
       />
 
-      {/* Add User Modal */}
-      <UserEditModal
-        isOpen={isAddModalOpen}
-        onClose={() => setIsAddModalOpen(false)}
-        user={null}
-        onSave={(data) => handleCreateUser(data)}
-      />
 
       {/* Delete Confirmation Dialog */}
       <ConfirmDialog

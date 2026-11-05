@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import axios from 'axios';
+import api from './api.js';
 
 const seed = {
   profile: { name: 'Vikky Podiyam', username: '@vikky.dev', role: 'Student', bio: 'Curious builder learning in public. I enjoy turning ideas into useful things.', skills: ['HTML', 'CSS', 'JavaScript', 'Node.js', 'Express.js', 'MongoDB'], interests: ['React', 'Open source', 'Web development'], github: 'github.com/vikkypodiyam', linkedin: 'linkedin.com/in/vikky-podiyam' },
@@ -29,16 +29,82 @@ const seed = {
   preferences: { email: true, answers: true, sessions: false, dark: false }
 };
 
-const readStore = () => { try { const saved = JSON.parse(localStorage.getItem('learnconnect-v1')); return saved ? { ...seed, ...saved } : seed; } catch { return seed; } };
+export const INITIAL_APP_STATE = seed;
+const readStore = () => { try { const saved = JSON.parse(localStorage.getItem('learnconnect-v1')); return saved ? { ...seed, ...saved } : structuredClone(seed); } catch { return structuredClone(seed); } };
+function readUserSession() {
+  try { return JSON.parse(localStorage.getItem('learnconnect-user-session') || sessionStorage.getItem('learnconnect-user-session') || 'null'); }
+  catch { return null; }
+}
 const Store = createContext(null);
 export function AppProvider({ children }) {
   const [data, setData] = useState(readStore);
   const [toast, setToast] = useState('');
-  useEffect(() => { localStorage.setItem('learnconnect-v1', JSON.stringify(data)); document.documentElement.dataset.theme = data.preferences.dark ? 'dark' : 'light'; }, [data]);
+  const [auth, setAuth] = useState({ status: 'checking', user: null, token: null });
+  const [dataReady, setDataReady] = useState(false);
+  useEffect(() => {
+    let active = true;
+    const session = readUserSession();
+    if (!session?.token) {
+      setAuth({ status: 'unauthenticated', user: null, token: null });
+      setDataReady(true);
+      return () => { active = false; };
+    }
+    api.get('/auth/me').then(async result => {
+      const stateResult = await api.get('/state');
+      if (!active) return;
+      const loadedState = { ...structuredClone(seed), ...(stateResult.data || {}) };
+      loadedState.profile = { ...result.data.user.profile, name: result.data.user.name, username: result.data.user.profile?.username || `@${result.data.user.username}`, role: 'Student' };
+      loadedState.preferences = { ...seed.preferences, ...(stateResult.data?.preferences || {}) };
+      setData(loadedState);
+      setAuth({ status: 'authenticated', user: result.data.user, token: session.token });
+    }).catch(() => {
+      localStorage.removeItem('learnconnect-user-session');
+      sessionStorage.removeItem('learnconnect-user-session');
+      if (active) setAuth({ status: 'unauthenticated', user: null, token: null });
+    }).finally(() => { if (active) setDataReady(true); });
+    return () => { active = false; };
+  }, []);
+  useEffect(() => {
+    if (auth.status !== 'authenticated') return undefined;
+    let active = true;
+    let refreshing = false;
+    const refreshSharedContent = async () => {
+      if (refreshing || document.visibilityState === 'hidden') return;
+      refreshing = true;
+      try {
+        const response = await api.get('/state');
+        if (active) setData(current => ({ ...current, questions: response.data.questions || [], discussions: response.data.discussions || [], sessions: response.data.sessions || [], categories: response.data.categories || [] }));
+      } catch { /* Keep the last loaded dashboard data while the API is temporarily unavailable. */ }
+      finally { refreshing = false; }
+    };
+    const timer = window.setInterval(refreshSharedContent, 15000);
+    window.addEventListener('focus', refreshSharedContent);
+    return () => { active = false; window.clearInterval(timer); window.removeEventListener('focus', refreshSharedContent); };
+  }, [auth.status]);
+  useEffect(() => {
+    document.documentElement.dataset.theme = data.preferences.dark ? 'dark' : 'light';
+    if (!dataReady) return;
+    localStorage.setItem('learnconnect-v1', JSON.stringify(data));
+  }, [data, dataReady]);
   const notify = (msg) => { setToast(msg); window.setTimeout(() => setToast(''), 2800); };
-  const update = (key, value) => setData(d => ({ ...d, [key]: typeof value === 'function' ? value(d[key]) : value }));
-  const toggle = (key, id, field) => update(key, rows => rows.map(row => row.id === id ? { ...row, [field]: !row[field] } : row));
-  const api = axios.create({ baseURL: '/api' });
-  return <Store.Provider value={{ data, update, toggle, notify, toast, api }}>{children}</Store.Provider>;
+  const mutate = async (collection, action, values = {}) => {
+    const response = await api.post('/state/actions', { collection, action, ...values });
+    const next = { ...structuredClone(seed), ...response.data };
+    setData(next);
+    localStorage.setItem('learnconnect-v1', JSON.stringify(next));
+    return response.result;
+  };
+  const setUserSession = async (session) => {
+    setDataReady(false);
+    const stateResult = await api.get('/state');
+    const loadedState = { ...structuredClone(seed), ...(stateResult.data || {}) };
+    loadedState.profile = { ...session.user.profile, name: session.user.name, username: session.user.profile?.username || `@${session.user.username}`, role: 'Student' };
+    loadedState.preferences = { ...seed.preferences, ...(stateResult.data?.preferences || {}) };
+    setData(loadedState);
+    setAuth({ status: 'authenticated', user: session.user, token: session.token });
+    setDataReady(true);
+  };
+  const clearUserSession = () => setAuth({ status: 'unauthenticated', user: null, token: null });
+  return <Store.Provider value={{ data, mutate, notify, toast, api, auth, setUserSession, clearUserSession }}>{children}</Store.Provider>;
 }
 export const useApp = () => useContext(Store);

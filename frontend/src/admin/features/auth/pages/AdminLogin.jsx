@@ -12,7 +12,7 @@ export default function AdminLogin() {
         <p>Sign in to manage your LearnConnect community.</p>
       </header>
       <LoginForm />
-      <div className="admin-login-foot"><ShieldCheck size={14}/> Protected admin access · Demo portal</div>
+      <div className="admin-login-foot"><ShieldCheck size={14}/> Protected administrator access</div>
     </section>
   </main>;
 }

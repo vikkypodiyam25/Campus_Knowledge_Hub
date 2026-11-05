@@ -8,10 +8,7 @@ import Users from './features/users/pages/Users';
 import Questions from './features/questions/pages/Questions';
 import Discussions from './features/discussions/pages/Discussions';
 import Sessions from './features/sessions/pages/Sessions';
-
-function AdminPlaceholder({ title }) {
-  return <section className="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm dark:border-slate-800 dark:bg-slate-900"><p className="text-xs font-semibold uppercase tracking-widest text-indigo-500">LearnConnect admin</p><h1 className="mt-2 text-2xl font-bold text-slate-900 dark:text-white">{title}</h1><p className="mt-2 text-sm text-slate-500 dark:text-slate-400">This section is ready for its management tools.</p></section>;
-}
+import ContentOverview from './features/dashboard/pages/ContentOverview';
 
 export default function App() {
   return <Routes>
@@ -23,11 +20,11 @@ export default function App() {
       <Route path="questions" element={<Questions />} />
       <Route path="discussions" element={<Discussions />} />
       <Route path="sessions" element={<Sessions />} />
-      <Route path="reports" element={<AdminPlaceholder title="Reports & Moderation" />} />
-      <Route path="categories" element={<AdminPlaceholder title="Categories & Topics" />} />
-      <Route path="notifications" element={<AdminPlaceholder title="Notifications" />} />
-      <Route path="analytics" element={<AdminPlaceholder title="Analytics" />} />
-      <Route path="settings" element={<AdminPlaceholder title="Settings" />} />
+      <Route path="reports" element={<ContentOverview mode="content" />} />
+      <Route path="categories" element={<ContentOverview mode="store" />} />
+      <Route path="notifications" element={<ContentOverview mode="content" />} />
+      <Route path="analytics" element={<ContentOverview mode="content" />} />
+      <Route path="settings" element={<ContentOverview mode="jobs" />} />
     </Route>
     <Route path="*" element={<Navigate to="/admin/dashboard" replace />} />
   </Routes>;

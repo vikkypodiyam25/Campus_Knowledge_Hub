@@ -1,27 +1,20 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Eye, EyeOff, LockKeyhole, Mail, UserRound } from 'lucide-react';
+import { Eye, EyeOff, LockKeyhole, UserRound } from 'lucide-react';
 import { validateEmail, validatePassword } from '../../../utils/validators.js';
 import { useAdminAuth } from '../../../hooks/useAdminAuth.js';
-import { ROLES } from '../../../utils/constants.js';
-
-const demoAccounts = [
-  { role: ROLES.SUPER_ADMIN, email: 'vikkypodiyam25@navgurukul.org', label: 'Super Admin', access: 'Full access' },
-  { role: ROLES.ADMIN, email: 'admin.staff@campus.edu', label: 'Admin', access: 'Standard' },
-  { role: ROLES.MODERATOR, email: 'moderator.lead@campus.edu', label: 'Moderator', access: 'Reports only' },
-];
 
 export default function LoginForm() {
-  const [email, setEmail] = useState(demoAccounts[0].email);
-  const [password, setPassword] = useState('Admin@123456');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [message, setMessage] = useState('');
-  const { login, setRole } = useAdminAuth();
+  const { login } = useAdminAuth();
   const navigate = useNavigate();
 
-  function submit(event) {
+  async function submit(event) {
     event.preventDefault();
     const emailError = validateEmail(email);
     const passwordError = validatePassword(password, 6);
@@ -32,19 +25,10 @@ export default function LoginForm() {
     setErrors({});
     setLoading(true);
     try {
-      const account = demoAccounts.find(item => item.email.toLowerCase() === email.trim().toLowerCase());
-      if (account) setRole(account.role);
-      if (login(email.trim(), password, account?.role)) navigate('/admin/dashboard');
+      if (await login(email.trim(), password)) navigate('/admin/dashboard');
     } finally {
       setLoading(false);
     }
-  }
-
-  function selectAccount(account) {
-    setEmail(account.email);
-    setPassword('Admin@123456');
-    setRole(account.role);
-    setMessage('');
   }
 
   return <form onSubmit={submit} className="admin-login-form">
@@ -61,15 +45,10 @@ export default function LoginForm() {
     {errors.password && <p className="admin-login-error">{errors.password}</p>}
     <div className="admin-login-options">
       <label><input type="checkbox" defaultChecked/> Remember me</label>
-      <button type="button" onClick={() => setMessage('Use the demo password below, or contact your campus administrator.')}>Forgot password?</button>
+      <span>Contact your system administrator if you need access help.</span>
     </div>
     {message && <p className="admin-login-message" role="status">{message}</p>}
     <button className="admin-login-submit" type="submit" disabled={loading}>{loading ? 'Signing in…' : 'Sign in to Dashboard'}</button>
-    <div className="admin-demo-accounts">
-      <p>Choose a demo role</p>
-      <div className="admin-demo-grid">{demoAccounts.map(account => <button type="button" key={account.email} onClick={() => selectAccount(account)}><strong>{account.label}</strong><span>{account.access}</span></button>)}</div>
-      <small>Demo password: <b>Admin@123456</b></small>
-    </div>
-    <Link to="/login" className="admin-login-user"><Mail size={13}/> Go to user login</Link>
+    <Link to="/login" className="admin-login-user">Go to student login</Link>
   </form>;
 }
