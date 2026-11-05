@@ -74,28 +74,47 @@ const server = http.createServer(async (req, res) => {
   }
 });
 
-function canListen(candidatePort) {
-  return new Promise(resolve => {
-    const probe = net.createServer();
-    probe.once('error', () => resolve(false));
-    probe.listen(candidatePort, '127.0.0.1', () => probe.close(() => resolve(true)));
-  });
-}
+function startServer(initialPort) {
+  return new Promise((resolve, reject) => {
+    function tryPort(candidate) {
+      if (candidate >= initialPort + 50) {
+        return reject(new Error(`No free port found between ${initialPort} and ${initialPort + 49}.`));
+      }
 
-async function findAvailablePort() {
-  for (let candidate = port; candidate < port + 100; candidate += 1) {
-    if (await canListen(candidate)) return candidate;
-  }
-  throw new Error(`No free port found between ${port} and ${port + 99}. Set PORT to a free port.`);
+      function onError(err) {
+        if (err.code === 'EADDRINUSE') {
+          cleanup();
+          return tryPort(candidate + 1);
+        }
+        cleanup();
+        reject(err);
+      }
+
+      function onListening() {
+        cleanup();
+        port = candidate;
+        resolve(candidate);
+      }
+
+      function cleanup() {
+        server.removeListener('error', onError);
+        server.removeListener('listening', onListening);
+      }
+
+      server.once('error', onError);
+      server.once('listening', onListening);
+      server.listen(candidate, '127.0.0.1');
+    }
+
+    tryPort(initialPort);
+  });
 }
 
 ensureDevelopmentAdmins().then(async () => {
-  port = await findAvailablePort();
   await startFrontendMiddleware();
-  server.listen(port, '127.0.0.1', () => {
-    console.log(`LearnConnect app and API listening at http://127.0.0.1:${port}`);
-    console.log(`SQLite data file: ${path.join(__dirname, 'data', 'learnconnect.sqlite')}`);
-  });
+  port = await startServer(port);
+  console.log(`LearnConnect app and API listening at http://localhost:${port}`);
+  console.log(`SQLite data file: ${path.join(__dirname, 'data', 'learnconnect.sqlite')}`);
 }).catch(error => {
   console.error(`Backend startup failed: ${error.message}`);
   process.exitCode = 1;

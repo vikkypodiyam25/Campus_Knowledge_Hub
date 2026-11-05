@@ -1,0 +1,22 @@
+{
+  "name": "campus-knowledge-hub",
+  "version": "1.0.0",
+  "description": "LearnConnect Campus Knowledge Hub — User Panel & Admin Dashboard",
+  "private": true,
+  "scripts": {
+    "admin:dev": "npm --prefix admin run dev",
+    "admin:build": "npm --prefix admin run build",
+    "admin:preview": "npm --prefix admin run preview",
+    "user:dev": "npm --prefix frontend run dev",
+    "user:build": "npm --prefix frontend run build"
+  },
+  "keywords": [
+    "learnconnect",
+    "campus-knowledge-hub",
+    "admin-dashboard",
+    "react",
+    "vite"
+  ],
+  "author": "Vikky Podiyam",
+  "license": "ISC"
+}
