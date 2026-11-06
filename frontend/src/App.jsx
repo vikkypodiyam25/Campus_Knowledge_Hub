@@ -1,27 +1,28 @@
-import React from 'react';
+import React, { lazy, Suspense } from 'react';
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { Bell, Check, X } from 'lucide-react';
 import { useApp } from './state.jsx';
 import Shell from './components/layout/Shell.jsx';
-import Login from './pages/Login.jsx';
-import AdminApp from './admin/AdminApp.jsx';
-import Dashboard from './pages/Dashboard.jsx';
-import Explore from './pages/Explore.jsx';
-import Questions from './pages/Questions.jsx';
-import Discussions from './pages/Discussions.jsx';
-import Detail from './pages/Detail.jsx';
-import FormPage from './pages/FormPage.jsx';
-import Sessions from './pages/Sessions.jsx';
-import Bookmarks from './pages/Bookmarks.jsx';
-import Contributions from './pages/Contributions.jsx';
-import Profile from './pages/Profile.jsx';
-import Notifications from './pages/Notifications.jsx';
-import SettingsPage from './pages/Settings.jsx';
-import NotFound from './pages/NotFound.jsx';
-import ChooseSubject from './pages/ChooseSubject.jsx';
-import SchoolItem from './pages/SchoolItem.jsx';
-import LearningOverview from './pages/LearningOverview.jsx';
 import './reply-notification.css';
+
+const Login = lazy(() => import('./pages/Login.jsx'));
+const AdminApp = lazy(() => import('./admin/AdminApp.jsx'));
+const Dashboard = lazy(() => import('./pages/Dashboard.jsx'));
+const Explore = lazy(() => import('./pages/Explore.jsx'));
+const Questions = lazy(() => import('./pages/Questions.jsx'));
+const Discussions = lazy(() => import('./pages/Discussions.jsx'));
+const Detail = lazy(() => import('./pages/Detail.jsx'));
+const FormPage = lazy(() => import('./pages/FormPage.jsx'));
+const Sessions = lazy(() => import('./pages/Sessions.jsx'));
+const Bookmarks = lazy(() => import('./pages/Bookmarks.jsx'));
+const Contributions = lazy(() => import('./pages/Contributions.jsx'));
+const Profile = lazy(() => import('./pages/Profile.jsx'));
+const Notifications = lazy(() => import('./pages/Notifications.jsx'));
+const SettingsPage = lazy(() => import('./pages/Settings.jsx'));
+const NotFound = lazy(() => import('./pages/NotFound.jsx'));
+const ChooseSubject = lazy(() => import('./pages/ChooseSubject.jsx'));
+const SchoolItem = lazy(() => import('./pages/SchoolItem.jsx'));
+const LearningOverview = lazy(() => import('./pages/LearningOverview.jsx'));
 
 function WorkspaceRoutes() {
   return <Routes>
@@ -75,12 +76,14 @@ function ReplyNotificationPopup() {
 export default function App() {
   const { toast } = useApp();
   return <>
-    <Routes>
-      <Route path="/admin/*" element={<AdminApp/>}/>
-      <Route path="/login" element={<Login/>}/>
-      <Route path="/" element={<Navigate to="/login" replace/>}/>
-      <Route path="/*" element={<UserProtectedWorkspace/>}/>
-    </Routes>
+    <Suspense fallback={<main className="login-page"><p>Loading LearnConnect…</p></main>}>
+      <Routes>
+        <Route path="/admin/*" element={<AdminApp/>}/>
+        <Route path="/login" element={<Login/>}/>
+        <Route path="/" element={<Navigate to="/login" replace/>}/>
+        <Route path="/*" element={<UserProtectedWorkspace/>}/>
+      </Routes>
+    </Suspense>
     {toast && <div className="toast"><span><Check size={15}/></span>{toast}</div>}
     <ReplyNotificationPopup />
   </>;
