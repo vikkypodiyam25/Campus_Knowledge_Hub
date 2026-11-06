@@ -114,7 +114,13 @@ function startServer(initialPort) {
   });
 }
 
-connectDb().then(() => ensureDevelopmentAdmins()).then(async () => {
+function verifyProductionFrontend() {
+  if (isProduction && !fs.existsSync(path.join(frontendDist, 'index.html'))) {
+    throw new Error('Production frontend build is missing. In Render, set Root Directory to the repository root (blank), Build Command to "npm run build", and Start Command to "npm start".');
+  }
+}
+
+Promise.resolve().then(verifyProductionFrontend).then(() => connectDb()).then(() => ensureDevelopmentAdmins()).then(async () => {
   await startFrontendMiddleware();
   port = await startServer(port);
   console.log(`LearnConnect app and API listening at http://localhost:${port}`);

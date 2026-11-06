@@ -5,7 +5,7 @@
   "description": "LearnConnect API and MongoDB database",
   "type": "commonjs",
   "scripts": {
-    "start": "node server.js",
+    "start": "node start.js",
     "dev": "node server.js",
     "migrate:sqlite": "node scripts/migrate-sqlite-to-mongo.js"
   },
