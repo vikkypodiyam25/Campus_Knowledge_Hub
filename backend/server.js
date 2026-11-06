@@ -4,6 +4,7 @@ const http = require('node:http');
 const fs = require('node:fs');
 const path = require('node:path');
 const { pathToFileURL } = require('node:url');
+const { serveProductionFrontend } = require('./utils/frontendAssets');
 const { connectDb, closeDb, mongoose } = require('./config/db');
 const { send, fail } = require('./utils/http');
 const apiRoutes = require('./routes');
@@ -16,25 +17,6 @@ const isProduction = process.env.NODE_ENV === 'production';
 let port = Number(process.env.PORT || 5000);
 let viteServer = null;
 let stopping = false;
-
-const mimeTypes = {
-  '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8',
-  '.css': 'text/css; charset=utf-8', '.svg': 'image/svg+xml', '.png': 'image/png',
-  '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.webp': 'image/webp',
-  '.ico': 'image/x-icon', '.woff2': 'font/woff2',
-};
-
-function serveProductionFrontend(req, res, pathname) {
-  const indexFile = path.join(frontendDist, 'index.html');
-  if (!fs.existsSync(indexFile)) return false;
-  const requested = path.resolve(frontendDist, `.${decodeURIComponent(pathname)}`);
-  if (!requested.startsWith(frontendDist + path.sep) && requested !== indexFile) return false;
-  const file = fs.existsSync(requested) && fs.statSync(requested).isFile() ? requested : indexFile;
-  const content = fs.readFileSync(file);
-  res.writeHead(200, { 'Content-Type': mimeTypes[path.extname(file).toLowerCase()] || 'application/octet-stream', 'Content-Length': content.length });
-  res.end(content);
-  return true;
-}
 
 async function startFrontendMiddleware() {
   if (isProduction) return;
@@ -65,10 +47,10 @@ const server = http.createServer(async (req, res) => {
   if (req.method === 'OPTIONS') { res.writeHead(204); return res.end(); }
   const url = new URL(req.url, `http://${req.headers.host || '127.0.0.1'}`);
   try {
-    if (url.pathname.startsWith('/api/')) return await apiRoutes.handleApi(req, res, url);
+    if (url.pathname === '/api' || url.pathname.startsWith('/api/')) return await apiRoutes.handleApi(req, res, url);
     if (req.method === 'GET' || req.method === 'HEAD') {
       if (viteServer) return viteServer.middlewares(req, res, () => fail(res, 404, 'Not found.'));
-      if (serveProductionFrontend(req, res, url.pathname)) return;
+      if (serveProductionFrontend(req, res, url.pathname, frontendDist)) return;
     }
     return fail(res, 404, 'Not found.');
   } catch (error) {
