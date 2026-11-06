@@ -1,6 +1,6 @@
 import React from 'react';
-import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
-import { Check } from 'lucide-react';
+import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
+import { Bell, Check, X } from 'lucide-react';
 import { useApp } from './state.jsx';
 import Shell from './components/layout/Shell.jsx';
 import Login from './pages/Login.jsx';
@@ -21,6 +21,7 @@ import NotFound from './pages/NotFound.jsx';
 import ChooseSubject from './pages/ChooseSubject.jsx';
 import SchoolItem from './pages/SchoolItem.jsx';
 import LearningOverview from './pages/LearningOverview.jsx';
+import './reply-notification.css';
 
 function WorkspaceRoutes() {
   return <Routes>
@@ -60,6 +61,17 @@ function UserProtectedWorkspace() {
   return <Shell><WorkspaceRoutes/></Shell>;
 }
 
+function ReplyNotificationPopup() {
+  const { replyPopup, dismissReplyPopup } = useApp();
+  const navigate = useNavigate();
+  if (!replyPopup) return null;
+  return <button className="reply-notification-popup" onClick={() => { dismissReplyPopup(); navigate(replyPopup.link || '/notifications'); }}>
+    <span className="reply-notification-icon"><Bell size={18}/></span>
+    <span className="reply-notification-copy"><b>{replyPopup.title}</b><small>{replyPopup.detail}</small></span>
+    <span className="reply-notification-close" role="button" aria-label="Dismiss notification" onClick={event => { event.stopPropagation(); dismissReplyPopup(); }}><X size={16}/></span>
+  </button>;
+}
+
 export default function App() {
   const { toast } = useApp();
   return <>
@@ -70,5 +82,6 @@ export default function App() {
       <Route path="/*" element={<UserProtectedWorkspace/>}/>
     </Routes>
     {toast && <div className="toast"><span><Check size={15}/></span>{toast}</div>}
+    <ReplyNotificationPopup />
   </>;
 }

@@ -1,6 +1,6 @@
 ﻿const crypto = require('node:crypto');
 const { promisify } = require('node:util');
-const { db, withTransaction } = require('../config/db');
+const { User, Admin, Session, UserState, AdminStorage } = require('../config/db');
 const jwt = require('jsonwebtoken');
 
 const scrypt = promisify(crypto.scrypt);
@@ -23,32 +23,31 @@ async function matchesPassword(password, salt, expectedHash) {
 }
 
 function publicUser(user) {
-  return { id: user.id, name: user.name, username: user.username, email: user.email, role: user.role, status: user.status, profile: JSON.parse(user.profile || '{}'), createdAt: user.created_at };
+  return { id: user.id, name: user.name, username: user.username, email: user.email, role: user.role, status: user.status, profile: user.profile || {}, createdAt: user.created_at };
 }
 
 function publicAdmin(admin) {
   return { id: admin.email, name: admin.name, email: admin.email, role: admin.role, avatar: admin.profile_picture || '', title: `${admin.role} Â· LearnConnect`, platform: 'LearnConnect' };
 }
 
-function makeSession({ userId = null, adminEmail = null, role }) {
+async function makeSession({ userId = null, adminEmail = null, role }) {
   const secret = String(process.env.JWT_SECRET || '');
   if (secret.length < 32) throw Object.assign(new Error('Set a random JWT_SECRET of at least 32 characters in backend/.env.'), { status: 500 });
   const expiresAt = Date.now() + 7 * 24 * 60 * 60 * 1000;
   const token = jwt.sign({ sub: userId || adminEmail, userId, adminEmail, role }, secret, {
     expiresIn: '7d', issuer: 'campus-knowledge-hub', audience: 'campus-knowledge-hub-api',
   });
-  db.prepare('INSERT INTO sessions(token_hash,user_id,admin_email,role,expires_at) VALUES(?,?,?,?,?)')
-    .run(digest(token), userId, adminEmail, role, expiresAt);
+  await Session.create({ token_hash: digest(token), user_id: userId, admin_email: adminEmail, role, expires_at: expiresAt });
   return { token, expiresAt: new Date(expiresAt).toISOString() };
 }
 
-function requireSession(req, expectedRole) {
+async function requireSession(req, expectedRole) {
   const authorization = req.headers.authorization || '';
   const token = authorization.startsWith('Bearer ') ? authorization.slice(7) : '';
   if (!token) return null;
-  const session = db.prepare(`SELECT s.*, u.name AS user_name, u.username AS user_username, u.email AS user_email, u.status AS user_status, u.profile AS user_profile, u.created_at AS user_created_at, a.name AS admin_name FROM sessions s LEFT JOIN users u ON u.id=s.user_id LEFT JOIN admins a ON a.email=s.admin_email WHERE s.token_hash=?`).get(digest(token));
+  const session = await Session.findOne({ token_hash: digest(token) }).lean();
   if (!session || session.expires_at < Date.now()) {
-    if (session) db.prepare('DELETE FROM sessions WHERE token_hash=?').run(session.token_hash);
+    if (session) await Session.deleteOne({ token_hash: session.token_hash });
     return null;
   }
   try {
@@ -57,44 +56,42 @@ function requireSession(req, expectedRole) {
   } catch {
     if (token.split('.').length === 3) return null;
   }
-  if (expectedRole === 'user' && (!session.user_id || session.user_status !== 'active')) return null;
-  if (expectedRole === 'admin' && (!session.admin_email || !session.admin_name)) return null;
-  return { token, session };
+  const user = session.user_id ? await User.findOne({ id: session.user_id }).lean() : null;
+  const admin = session.admin_email ? await Admin.findOne({ email: session.admin_email }).lean() : null;
+  if (expectedRole === 'user' && (!user || user.status !== 'active')) return null;
+  if (expectedRole === 'admin' && !admin) return null;
+  return { token, session: { ...session, user_name: user?.name, user_username: user?.username, user_email: user?.email, user_status: user?.status, user_profile: user?.profile, user_created_at: user?.created_at, admin_name: admin?.name } };
 }
 
-function ensureDevelopmentAdmins() {
+async function ensureDevelopmentAdmins() {
   const configuredPassword = process.env.ADMIN_PASSWORD;
   if (!configuredPassword) throw new Error('Set ADMIN_PASSWORD in backend/.env before starting the server.');
   if (configuredPassword.length < 12) throw new Error('ADMIN_PASSWORD must be at least 12 characters long.');
   const admins = [{ email: normalizeEmail(process.env.ADMIN_EMAIL), name: process.env.ADMIN_NAME || 'LearnConnect Admin', role: 'Super Admin' }];
   if (!admins[0].email) throw new Error('Set ADMIN_EMAIL in backend/.env before starting the server.');
-  const insert = db.prepare('INSERT INTO admins(email,name,role,password_hash,password_salt) VALUES(?,?,?,?,?) ON CONFLICT(email) DO UPDATE SET name=excluded.name, role=excluded.role, password_hash=excluded.password_hash, password_salt=excluded.password_salt');
   return Promise.all(admins.map(async admin => {
     const { salt, hash } = await makePassword(configuredPassword);
-    insert.run(normalizeEmail(admin.email), admin.name, admin.role, hash, salt);
+    await Admin.findOneAndUpdate({ email: normalizeEmail(admin.email) }, { $set: { name: admin.name, role: admin.role, password_hash: hash, password_salt: salt }, $setOnInsert: { email: normalizeEmail(admin.email) } }, { upsert: true, returnDocument: 'after' });
   }));
 }
 
-function adminStorageObject() {
+async function adminStorageObject() {
   const result = {};
-  for (const row of db.prepare('SELECT key,value FROM admin_storage').all()) {
-    try { result[row.key] = JSON.parse(row.value); } catch { result[row.key] = null; }
-  }
+  for (const row of await AdminStorage.find({}).lean()) result[row.key] = row.value;
   return result;
 }
 
-function storeAdminItem(key, value) {
-  db.prepare('INSERT INTO admin_storage(key,value,updated_at) VALUES(?,?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value, updated_at=excluded.updated_at')
-    .run(key, JSON.stringify(value), new Date().toISOString());
+async function storeAdminItem(key, value) {
+  await AdminStorage.findOneAndUpdate({ key }, { $set: { value, updated_at: new Date().toISOString() } }, { upsert: true });
 }
 
 const adminKeys = new Set(['learnconnect_categories_data']);
 
-function syncUserContentToAdminStorage(userId, data) {
-  const user = db.prepare('SELECT id,name,email,profile FROM users WHERE id=?').get(userId);
+async function syncUserContentToAdminStorage(userId, data) {
+  const user = await User.findOne({ id: userId }).lean();
   if (!user || !data) return;
   let profile = {};
-  try { profile = JSON.parse(user.profile || '{}'); } catch { /* Use safe defaults. */ }
+  profile = user.profile || {};
   const author = { id: user.id, name: user.name, email: user.email, avatar: profile.avatar || '' };
   const now = new Date().toISOString();
   const maps = [
@@ -119,7 +116,7 @@ function syncUserContentToAdminStorage(userId, data) {
   ];
   for (const [stateKey, storageKey, convert] of maps) {
     const values = Array.isArray(data[stateKey]) ? data[stateKey] : [];
-    const existing = adminStorageObject()[storageKey];
+    const existing = (await adminStorageObject())[storageKey];
     const rows = Array.isArray(existing) ? existing : [];
     const knownIds = new Set(rows.map(row => String(row.id)));
     let changed = false;
@@ -136,20 +133,20 @@ function syncUserContentToAdminStorage(userId, data) {
         changed = true;
       }
     }
-    if (changed || !Array.isArray(existing)) storeAdminItem(storageKey, rows);
+    if (changed || !Array.isArray(existing)) await storeAdminItem(storageKey, rows);
   }
 }
 
 const userStateKeys = new Set(['profile', 'questions', 'discussions', 'sessions', 'notifications', 'preferences']);
 
-function readUserState(userId) {
-  const row = db.prepare('SELECT data FROM user_states WHERE user_id=?').get(userId);
-  return row ? JSON.parse(row.data) : { profile: {}, questions: [], discussions: [], sessions: [], notifications: [], preferences: {} };
+async function readUserState(userId) {
+  const row = await UserState.findOne({ user_id: userId }).lean();
+  return row ? row.data : { profile: {}, questions: [], discussions: [], sessions: [], notifications: [], preferences: {} };
 }
 
-function getUserDashboardState(userId) {
-  const state = readUserState(userId);
-  const admin = adminStorageObject();
+async function getUserDashboardState(userId) {
+  const state = await readUserState(userId);
+  const admin = await adminStorageObject();
   const categories = (Array.isArray(admin.learnconnect_categories_data) ? admin.learnconnect_categories_data : [])
     .filter(category => category && category.active !== false && category.name)
     .map(category => category.name);
@@ -210,7 +207,7 @@ function getUserDashboardState(userId) {
   return { ...state, categories };
 }
 
-function persistUserState(userId, state) {
+async function persistUserState(userId, state) {
   if (!state || typeof state !== 'object' || Array.isArray(state)) throw Object.assign(new Error('State data must be an object.'), { status: 400 });
   for (const key of Object.keys(state)) if (!userStateKeys.has(key)) throw Object.assign(new Error(`Unknown user state field: ${key}`), { status: 400 });
   for (const key of ['questions', 'discussions', 'sessions', 'notifications']) {
@@ -221,20 +218,17 @@ function persistUserState(userId, state) {
   const serialized = JSON.stringify(state);
   if (Buffer.byteLength(serialized) > 1_500_000) throw Object.assign(new Error('User data is too large.'), { status: 413 });
   const now = new Date().toISOString();
-  withTransaction(() => {
-    db.prepare('INSERT INTO user_states(user_id,data,updated_at) VALUES(?,?,?) ON CONFLICT(user_id) DO UPDATE SET data=excluded.data, updated_at=excluded.updated_at')
-      .run(userId, serialized, now);
-    if (state.profile) {
-      const current = db.prepare('SELECT name,profile FROM users WHERE id=?').get(userId);
-      if (current) {
-        const profile = { ...JSON.parse(current.profile || '{}'), ...state.profile };
-        const name = String(profile.name || current.name).trim().slice(0, 80) || current.name;
-        profile.name = name;
-        db.prepare('UPDATE users SET name=?,profile=? WHERE id=?').run(name, JSON.stringify(profile), userId);
-      }
+  await UserState.findOneAndUpdate({ user_id: userId }, { $set: { data: state, updated_at: now } }, { upsert: true });
+  if (state.profile) {
+    const current = await User.findOne({ id: userId }).lean();
+    if (current) {
+      const profile = { ...(current.profile || {}), ...state.profile };
+      const name = String(profile.name || current.name).trim().slice(0, 80) || current.name;
+      profile.name = name;
+      await User.updateOne({ id: userId }, { $set: { name, profile } });
     }
-  });
-  syncUserContentToAdminStorage(userId, state);
+  }
+  await syncUserContentToAdminStorage(userId, state);
 }
 
 function applyUserAction(user, state, body) {
@@ -251,8 +245,9 @@ function applyUserAction(user, state, body) {
     if (!title || title.length > 120 || !description || description.length > 5000) throw Object.assign(new Error('Enter a title (up to 120 characters) and a description (up to 5000 characters).'), { status: 400 });
     const common = { id: Date.now(), title, description, category: String(payload.category || 'General').slice(0, 60), time: 'Just now', saved: false };
     let item;
-    if (collection === 'questions') item = { ...common, author: userName, initials, votes: 0, answers: [], tags: Array.isArray(payload.tags) ? payload.tags.slice(0, 20).map(tag => String(tag).slice(0, 40)) : [] };
-    if (collection === 'discussions') item = { ...common, author: userName, initials, likes: 0, comments: [], tags: Array.isArray(payload.tags) ? payload.tags.slice(0, 20).map(tag => String(tag).slice(0, 40)) : [] };
+    const owner = { id: user.id, email: user.user_email };
+    if (collection === 'questions') item = { ...common, author: userName, authorId: owner.id, authorEmail: owner.email, initials, votes: 0, answers: [], tags: Array.isArray(payload.tags) ? payload.tags.slice(0, 20).map(tag => String(tag).slice(0, 40)) : [] };
+    if (collection === 'discussions') item = { ...common, author: userName, authorId: owner.id, authorEmail: owner.email, initials, likes: 0, comments: [], tags: Array.isArray(payload.tags) ? payload.tags.slice(0, 20).map(tag => String(tag).slice(0, 40)) : [] };
     if (collection === 'sessions') {
       const duration = Math.max(15, Math.min(240, Number(payload.duration) || 60));
       if (!payload.date || !payload.time) throw Object.assign(new Error('Choose a date and time for the session.'), { status: 400 });
@@ -298,6 +293,7 @@ function applyUserAction(user, state, body) {
     const reply = { id: Date.now(), author: userName, text, createdAt: now };
     if (collection === 'questions') item.answers = [...(item.answers || []), reply];
     else item.comments = [...(item.comments || []), reply];
+    return { item, reply, ownerId: item.authorId || item.ownerId || item.userId || (String(item.id).startsWith('u_') ? String(item.id).split('_')[1] : null), ownerEmail: item.authorEmail || item.ownerEmail || item.author?.email || null, title: item.title, collection };
   } else if (action === 'register' && collection === 'sessions') {
     if (!item.registered) { item.registered = true; item.participants = Number(item.participants || 0) + 1; }
   } else if (action === 'markRead' && collection === 'notifications') item.read = true;
@@ -305,4 +301,22 @@ function applyUserAction(user, state, body) {
   return item;
 }
 
-module.exports = { normalizeEmail, digest, makePassword, matchesPassword, publicUser, publicAdmin, makeSession, requireSession, ensureDevelopmentAdmins, adminStorageObject, storeAdminItem, syncUserContentToAdminStorage, adminKeys, readUserState, getUserDashboardState, persistUserState, applyUserAction };
+async function addReplyNotification({ ownerId, ownerEmail, author, title, collection, linkId }) {
+  const owner = ownerId ? await User.findOne({ id: ownerId }).lean() : ownerEmail ? await User.findOne({ email: normalizeEmail(ownerEmail) }).lean() : null;
+  if (!owner || owner.id === linkId?.actorId) return null;
+  const state = await readUserState(owner.id);
+  const isQuestion = collection === 'questions';
+  const notification = {
+    id: `reply_${crypto.randomUUID()}`,
+    title: isQuestion ? `${author} answered your doubt` : `${author} commented on your discussion`,
+    detail: title || (isQuestion ? 'Someone answered your question.' : 'Someone commented on your discussion.'),
+    time: 'Just now', read: false, icon: 'message',
+    link: isQuestion ? `/questions/${linkId?.itemId}` : `/discussions/${linkId?.itemId}`,
+  };
+  state.notifications = [notification, ...(state.notifications || [])].slice(0, 100);
+  delete state.categories;
+  await persistUserState(owner.id, state);
+  return notification;
+}
+
+module.exports = { normalizeEmail, digest, makePassword, matchesPassword, publicUser, publicAdmin, makeSession, requireSession, ensureDevelopmentAdmins, adminStorageObject, storeAdminItem, syncUserContentToAdminStorage, adminKeys, readUserState, getUserDashboardState, persistUserState, applyUserAction, addReplyNotification };

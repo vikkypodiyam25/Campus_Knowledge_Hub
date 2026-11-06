@@ -2,7 +2,7 @@
 
 ## Run
 
-From this directory, set `ADMIN_EMAIL`, `ADMIN_NAME`, and a strong `ADMIN_PASSWORD` in `.env`, then run `npm run dev`. The backend serves the frontend on the same port. The configured administrator account is provisioned on startup; there are no demo credentials.
+From this directory, set `MONGODB_URI`, `ADMIN_EMAIL`, `ADMIN_NAME`, and a strong `ADMIN_PASSWORD` in `.env`, then run `npm run dev`. The backend serves the frontend on the same port. The configured administrator account is provisioned on startup; there are no demo credentials.
 
 ## Project layout
 
@@ -10,12 +10,14 @@ From this directory, set `ADMIN_EMAIL`, `ADMIN_NAME`, and a strong `ADMIN_PASSWO
 - `routes/` selects the API route group: authentication, user state, or admin operations.
 - `controllers/` contains separate authentication, user-state, and admin handlers.
 - `services/appService.js` holds shared authentication, validation, state, and sync logic.
-- `config/db.js` opens SQLite and creates the tables.
+- `config/db.js` connects to MongoDB and defines the application collections.
 - `config/env.js` loads the local `.env` file.
 - `utils/http.js` contains shared HTTP response and JSON body helpers.
-- `data/learnconnect.sqlite` is the persistent application database.
+- MongoDB stores users, sessions, user state, progress, assignment submissions, and admin settings.
 
-The active backend uses SQLite. `MONGODB_URI` is only a saved setting for reference; it is not connected by this server.
+The backend uses MongoDB. You can use a local MongoDB server or MongoDB Atlas. Set `MONGODB_URI` in `backend/.env`; the server will fail to start if it cannot connect.
+
+If you have existing data in `backend/data/learnconnect.sqlite`, back up that file and `.env`, configure `MONGODB_URI`, then run `npm run migrate:sqlite` once from this directory. The migration imports existing collections without deleting the SQLite source. New app writes go to MongoDB.
 
 ## Google sign-in
 
@@ -25,4 +27,4 @@ Set `JWT_SECRET` in `backend/.env` to a unique random value of at least 32 chara
 
 Google login on `/admin/login` only succeeds when the verified Google email already belongs to an administrator provisioned by `ADMIN_EMAIL`. A Google login can create a student account; it cannot grant administrator permissions.
 
-The requested `MONGO_URI` is documented in the example for a future migration, but this project currently uses SQLite. This integration stores the Google ID and picture in the existing SQLite records to preserve current user state and admin features; it does not connect to MongoDB.
+User passwords continue to be stored as salted hashes. MongoDB connection credentials must stay in `backend/.env` and must not be committed.

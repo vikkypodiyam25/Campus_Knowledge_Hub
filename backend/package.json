@@ -2,17 +2,19 @@
   "name": "learnconnect-backend",
   "version": "1.0.0",
   "private": true,
-  "description": "LearnConnect API and local SQLite database",
+  "description": "LearnConnect API and MongoDB database",
   "type": "commonjs",
   "scripts": {
     "start": "node server.js",
-    "dev": "node server.js"
+    "dev": "node server.js",
+    "migrate:sqlite": "node scripts/migrate-sqlite-to-mongo.js"
   },
   "engines": {
     "node": ">=22.13.0"
   },
   "dependencies": {
     "google-auth-library": "^11.3.3",
-    "jsonwebtoken": "^9.0.3"
+    "jsonwebtoken": "^9.0.3",
+    "mongoose": "^9.12.0"
   }
 }

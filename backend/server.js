@@ -5,7 +5,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const net = require('node:net');
 const { pathToFileURL } = require('node:url');
-const { db } = require('./config/db');
+const { connectDb, closeDb, mongoose } = require('./config/db');
 const { send, fail } = require('./utils/http');
 const apiRoutes = require('./routes');
 const { ensureDevelopmentAdmins } = require('./services/appService');
@@ -115,11 +115,11 @@ function startServer(initialPort) {
   });
 }
 
-ensureDevelopmentAdmins().then(async () => {
+connectDb().then(() => ensureDevelopmentAdmins()).then(async () => {
   await startFrontendMiddleware();
   port = await startServer(port);
   console.log(`LearnConnect app and API listening at http://localhost:${port}`);
-  console.log(`SQLite data file: ${path.join(__dirname, 'data', 'learnconnect.sqlite')}`);
+  console.log(`MongoDB connected: ${mongoose.connection.name}`);
 }).catch(error => {
   console.error(`Backend startup failed: ${error.message}`);
   process.exitCode = 1;
@@ -130,7 +130,7 @@ function stop() {
   stopping = true;
   server.close(async () => {
     if (viteServer) await viteServer.close();
-    db.close();
+    await closeDb();
     process.exit(0);
   });
   setTimeout(() => process.exit(1), 5000).unref();

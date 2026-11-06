@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
 import api from './api.js';
 
 const seed = {
@@ -45,6 +45,8 @@ export function AppProvider({ children }) {
   const [toast, setToast] = useState('');
   const [auth, setAuth] = useState({ status: 'checking', user: null, token: null });
   const [dataReady, setDataReady] = useState(false);
+  const seenNotificationIds = useRef(new Set());
+  const [replyPopup, setReplyPopup] = useState(null);
   useEffect(() => {
     let active = true;
     const session = readUserSession();
@@ -59,6 +61,7 @@ export function AppProvider({ children }) {
       const loadedState = { ...structuredClone(seed), ...(stateResult.data || {}) };
       loadedState.profile = { ...result.data.user.profile, subject: result.data.user.profile?.subject || readSelectedSubject(result.data.user.id), name: result.data.user.name, username: result.data.user.profile?.username || `@${result.data.user.username}`, role: 'Student' };
       loadedState.preferences = { ...seed.preferences, ...(stateResult.data?.preferences || {}) };
+      seenNotificationIds.current = new Set(loadedState.notifications.map(item => String(item.id)));
       setData(loadedState);
       setAuth({ status: 'authenticated', user: result.data.user, token: session.token });
     }).catch(() => {
@@ -77,7 +80,16 @@ export function AppProvider({ children }) {
       refreshing = true;
       try {
         const response = await api.get('/state');
-        if (active) setData(current => ({ ...current, questions: response.data.questions || [], discussions: response.data.discussions || [], sessions: response.data.sessions || [], notifications: response.data.notifications || current.notifications, categories: response.data.categories || [] }));
+        if (active) setData(current => {
+          const incoming = response.data.notifications || current.notifications;
+          const newReply = incoming.find(item => !seenNotificationIds.current.has(String(item.id)) && !item.read && String(item.id).startsWith('reply_'));
+          incoming.forEach(item => seenNotificationIds.current.add(String(item.id)));
+          if (newReply) {
+            setReplyPopup(newReply);
+            window.setTimeout(() => setReplyPopup(currentPopup => currentPopup?.id === newReply.id ? null : currentPopup), 6500);
+          }
+          return { ...current, questions: response.data.questions || [], discussions: response.data.discussions || [], sessions: response.data.sessions || [], notifications: incoming, categories: response.data.categories || [] };
+        });
       } catch { /* Keep the last loaded dashboard data while the API is temporarily unavailable. */ }
       finally { refreshing = false; }
     };
@@ -114,6 +126,6 @@ export function AppProvider({ children }) {
     setDataReady(true);
   };
   const clearUserSession = () => setAuth({ status: 'unauthenticated', user: null, token: null });
-  return <Store.Provider value={{ data, mutate, notify, toast, api, auth, setUserSession, clearUserSession }}>{children}</Store.Provider>;
+  return <Store.Provider value={{ data, mutate, notify, toast, api, auth, setUserSession, clearUserSession, replyPopup, dismissReplyPopup: () => setReplyPopup(null) }}>{children}</Store.Provider>;
 }
 export const useApp = () => useContext(Store);
