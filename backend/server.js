@@ -3,7 +3,6 @@ require('./config/env')();
 const http = require('node:http');
 const fs = require('node:fs');
 const path = require('node:path');
-const net = require('node:net');
 const { pathToFileURL } = require('node:url');
 const { connectDb, closeDb, mongoose } = require('./config/db');
 const { send, fail } = require('./utils/http');
@@ -108,7 +107,7 @@ function startServer(initialPort) {
 
       server.once('error', onError);
       server.once('listening', onListening);
-      server.listen(candidate, '127.0.0.1');
+      server.listen(candidate, '0.0.0.0');
     }
 
     tryPort(initialPort);

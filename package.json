@@ -3,7 +3,12 @@
   "version": "1.0.0",
   "description": "LearnConnect Campus Knowledge Hub — User Panel & Admin Dashboard",
   "private": true,
+  "engines": {
+    "node": ">=22.13.0"
+  },
   "scripts": {
+    "build": "npm --prefix backend install && npm --prefix frontend install && npm --prefix frontend run build",
+    "start": "node backend/server.js",
     "admin:dev": "npm --prefix admin run dev",
     "admin:build": "npm --prefix admin run build",
     "admin:preview": "npm --prefix admin run preview",
