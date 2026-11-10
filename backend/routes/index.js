@@ -1,7 +1,7 @@
 const { send, fail } = require('../utils/http');
 const authRoutes = require('./authRoutes');
 const userRoutes = require('./userRoutes');
-const adminRoutes = require('./adminRoutes');
+const adminRoutes = require('./adminroutes');
 
 const routeGroups = [authRoutes, userRoutes, adminRoutes];
 
