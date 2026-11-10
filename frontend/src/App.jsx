@@ -3,6 +3,7 @@ import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-
 import { Bell, Check, X } from 'lucide-react';
 import { useApp } from './state.jsx';
 import Shell from './components/layout/Shell.jsx';
+import RouteErrorBoundary from './components/common/RouteErrorBoundary.jsx';
 import './reply-notification.css';
 
 const Login = lazy(() => import('./pages/Login.jsx'));
@@ -76,6 +77,7 @@ function ReplyNotificationPopup() {
 export default function App() {
   const { toast } = useApp();
   return <>
+    <RouteErrorBoundary>
     <Suspense fallback={<main className="login-page"><p>Loading LearnConnect…</p></main>}>
       <Routes>
         <Route path="/admin/*" element={<AdminApp/>}/>
@@ -84,6 +86,7 @@ export default function App() {
         <Route path="/*" element={<UserProtectedWorkspace/>}/>
       </Routes>
     </Suspense>
+    </RouteErrorBoundary>
     {toast && <div className="toast"><span><Check size={15}/></span>{toast}</div>}
     <ReplyNotificationPopup />
   </>;

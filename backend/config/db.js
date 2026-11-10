@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const dns = require('node:dns');
 
 const { Schema } = mongoose;
 const options = { versionKey: false, minimize: false };
@@ -31,6 +32,12 @@ const PasswordReset = mongoose.model('PasswordReset', passwordResetSchema);
 async function connectDb() {
   const uri = String(process.env.MONGODB_URI || process.env.MONGO_URI || '').trim();
   if (!uri) throw new Error('Set MONGODB_URI in backend/.env before starting the server.');
+  // Some Windows DNS forwarders refuse Node's SRV/TXT resolver requests even
+  // when the same records are available through a public resolver. Allow an
+  // explicit resolver list and default to Google/Cloudflare for Atlas SRV URIs.
+  const dnsServers = String(process.env.MONGODB_DNS_SERVERS || '8.8.8.8,1.1.1.1')
+    .split(',').map(server => server.trim()).filter(Boolean);
+  if (uri.startsWith('mongodb+srv://') && dnsServers.length) dns.setServers(dnsServers);
   try {
     await mongoose.connect(uri, { serverSelectionTimeoutMS: 10000 });
   } catch (error) {

@@ -2,7 +2,7 @@
 
 ## Run
 
-From this directory, set `MONGODB_URI`, `ADMIN_EMAIL`, `ADMIN_NAME`, and a strong `ADMIN_PASSWORD` in `.env`, then run `npm run dev`. The backend serves the frontend on the same port. The configured administrator account is provisioned on startup; there are no demo credentials.
+From this directory, set `MONGODB_URI`, `ADMIN_EMAIL`, `ADMIN_NAME`, and a strong `ADMIN_PASSWORD` in `.env`, then run `npm run dev`. The backend API listens on `http://localhost:5001`. Run the separate Vite frontend from `frontend/` with `npm run dev`; it listens on `http://localhost:5173`. The configured administrator account is provisioned on startup; there are no demo credentials.
 
 ## Project layout
 
@@ -21,10 +21,14 @@ If you have existing data in `backend/data/learnconnect.sqlite`, back up that fi
 
 ## Google sign-in
 
-Create a Google OAuth **Web application** client in Google Cloud Console. Add the exact app origin (for local development, the `http://127.0.0.1:<port>` URL printed by the backend) to Authorized JavaScript origins. Copy its client ID to `backend/.env` as `GOOGLE_CLIENT_ID` and `frontend/.env` as `VITE_GOOGLE_CLIENT_ID`, then restart the backend. The client ID is public configuration; never put a Google client secret in frontend variables. Google ID tokens are verified server-side with Google's auth library. The backend links verified emails to existing accounts, stores the Google subject and profile picture, and issues a signed application JWT tracked in the existing revocable session table.
+Create a Google OAuth **Web application** client in Google Cloud Console. Add `http://localhost:5173` to Authorized JavaScript origins. Copy its client ID to `backend/.env` as `GOOGLE_CLIENT_ID` and `frontend/.env` as `VITE_GOOGLE_CLIENT_ID`, then restart both servers. The client ID is public configuration; never put a Google client secret in frontend variables. Google ID tokens are verified server-side with Google's auth library. The backend links verified emails to existing accounts, stores the Google subject and profile picture, and issues a signed application JWT tracked in the existing revocable session table.
 
 Set `JWT_SECRET` in `backend/.env` to a unique random value of at least 32 characters. A local value is generated when this feature is installed; replace it with a deployment secret manager value in production. `frontend/.env.example` and `backend/.env.example` contain placeholders only; never commit `.env` files.
 
 Google login on `/admin/login` only succeeds when the verified Google email already belongs to an administrator provisioned by `ADMIN_EMAIL`. A Google login can create a student account; it cannot grant administrator permissions.
 
 User passwords continue to be stored as salted hashes. MongoDB connection credentials must stay in `backend/.env` and must not be committed.
+
+## Create Google Meet links for sessions
+
+Student and admin session forms can create a scheduled Google Calendar event with a unique Google Meet room. Set `VITE_GOOGLE_CLIENT_ID` in `frontend/.env` to the same Web OAuth client ID used by `GOOGLE_CLIENT_ID`. In Google Cloud, enable the Google Calendar API for that project and add `http://localhost:5173` to the OAuth client's Authorized JavaScript origins. If the OAuth consent screen's publishing status is **Testing**, add the Google account that will create the Meet as a test user. When a host clicks **Create Google Meet link**, Google asks for permission to create events on calendars they own; after approval, the event and Meet URL are created on that host's primary calendar and the URL is filled into the session form. The host then saves the session in LearnConnect.

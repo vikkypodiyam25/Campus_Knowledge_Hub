@@ -332,3 +332,13 @@
   .admin-login-options { font-size: 8px; }
 }
 @media (prefers-reduced-motion: reduce) { .admin-login-page *, .admin-login-page *::before, .admin-login-page *::after { transition-duration: .01ms !important; } }
+
+/* Align admin screens with the refreshed campus workspace palette. */
+.admin-shell:not(.dark) { background: #f4f7f8; color: #172b35; }
+.admin-shell:not(.dark) aside > div:first-child { box-shadow: 8px 0 30px rgb(25 56 67 / 3%); }
+.admin-shell:not(.dark) header { backdrop-filter: blur(16px); }
+.admin-shell main .shadow-card { border-radius: 15px; box-shadow: 0 8px 24px rgb(25 56 67 / 5%); transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease; }
+.admin-shell main .shadow-card:hover { transform: translateY(-2px); border-color: #c9e3dc; box-shadow: 0 13px 30px rgb(25 56 67 / 9%); }
+.admin-shell:not(.dark) aside a[aria-current="page"] { border: 1px solid #d8eee6; background: linear-gradient(100deg,#e8f7f1,#f1faf7); box-shadow: inset 3px 0 #0d9b88; }
+.admin-shell:not(.dark) .admin-dashboard-hero { border-radius: 22px; }
+@media (prefers-reduced-motion: reduce) { .admin-shell main .shadow-card { transition: none; } }

@@ -5,6 +5,9 @@ import Select from '../../../components/common/Select';
 import Button from '../../../components/common/Button';
 import { SESSION_STATUS, DEFAULT_CATEGORIES } from '../../../utils/constants';
 import { validateRequired } from '../../../utils/validators';
+import GoogleMeetLinkButton from '../../../../components/common/GoogleMeetLinkButton.jsx';
+
+const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID?.trim();
 
 export const SessionEditModal = ({
   isOpen,
@@ -147,10 +150,11 @@ export const SessionEditModal = ({
 
         <Input
           label="Meeting URL"
-            placeholder="https://meet.google.com/... or your meeting room URL"
+          placeholder="https://meet.google.com/... or your meeting room URL"
           value={formData.meetingLink}
           onChange={(e) => setFormData({ ...formData, meetingLink: e.target.value })}
         />
+        {googleClientId && <div className="rounded-xl border border-slate-200 p-3 dark:border-slate-700"><GoogleMeetLinkButton enabled title={formData.title} description={formData.description} date={formData.scheduledDate.slice(0, 10)} time={formData.scheduledDate.slice(11, 16)} duration={Number.parseInt(formData.duration, 10) || 60} onCreated={meetingLink => setFormData(current => ({ ...current, meetingLink }))}/></div>}
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <Input label="Instructor / Host Name" value={formData.hostName || 'Administrator'} disabled />

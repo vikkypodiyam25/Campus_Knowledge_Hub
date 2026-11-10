@@ -8,7 +8,9 @@ function readSession(key) {
   }
 }
 
-const api = axios.create({ baseURL: import.meta.env.VITE_API_URL || '/api', timeout: 15000, headers: { 'Content-Type': 'application/json' } });
+const configuredApiUrl = String(import.meta.env.VITE_API_URL || '/api').trim().replace(/\/+$/, '');
+const apiBaseUrl = configuredApiUrl === '/api' || configuredApiUrl.endsWith('/api') ? configuredApiUrl : `${configuredApiUrl}/api`;
+const api = axios.create({ baseURL: apiBaseUrl, timeout: 15000, headers: { 'Content-Type': 'application/json' } });
 
 api.interceptors.request.use(config => {
   const isAdminRequest = config.url?.startsWith('/admin/');

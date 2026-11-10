@@ -54,17 +54,18 @@ export default function SchoolItem({ kind }) {
 
   const moduleKey = item.id;
   const topics = kind === 'subject'
-    ? item.modules.flatMap(module => module.topics.map((topic, index) => ({ topic, description: module.lessonDetails?.[index], key: `${moduleKey}-${index}` })))
-    : item.topics.map((topic, index) => ({ topic, description: item.lessonDetails?.[index], key: `${moduleKey}-${index}` }));
+    ? item.modules.flatMap(module => module.topics.map((topic, index) => ({ topic, description: module.lessonDetails?.[index], moduleId: module.id, key: `${module.id}-${index}` })))
+    : item.topics.map((topic, index) => ({ topic, description: item.lessonDetails?.[index], moduleId: item.id, key: `${item.id}-${index}` }));
   const assignments = kind === 'subject' ? item.modules.filter(module => module.assignment).map(module => ({ ...module.assignment, moduleId: module.id, moduleName: module.name })) : item.assignment ? [{ ...item.assignment, moduleId: item.id, moduleName: item.name }] : [];
-  const resources = item.resources || curriculum.resources || [];
+  const itemResources = item.resources || (item.modules ? item.modules.flatMap(module => module.resources || []) : []);
+  const resources = itemResources.length ? itemResources : curriculum.resources || [];
   const completed = new Set(progress.filter(row => row.schoolCode === curriculum.code && row.status === 'completed').map(row => row.topicId));
-  const toggle = async topicId => {
+  const toggle = async (topicId, moduleId = moduleKey) => {
     setSaving(topicId);
     const status = completed.has(topicId) ? 'not_started' : 'completed';
     try {
-      await api.post('/progress', { schoolCode: curriculum.code, moduleId: moduleKey, topicId, status });
-      setProgress(rows => [...rows.filter(row => !(row.schoolCode === curriculum.code && row.moduleId === moduleKey && row.topicId === topicId)), { schoolCode: curriculum.code, moduleId: moduleKey, topicId, status }]);
+      await api.post('/progress', { schoolCode: curriculum.code, moduleId, topicId, status });
+      setProgress(rows => [...rows.filter(row => !(row.schoolCode === curriculum.code && row.moduleId === moduleId && row.topicId === topicId)), { schoolCode: curriculum.code, moduleId, topicId, status }]);
     } catch (error) { notify(error.message || 'Could not save progress.'); }
     finally { setSaving(''); }
   };
@@ -73,7 +74,7 @@ export default function SchoolItem({ kind }) {
     <button type="button" className="subtle-link" onClick={() => navigate('/dashboard')}><ArrowLeft size={15}/> Back to {curriculum.shortName}</button>
     <header className="school-detail-heading"><span className={`school-code school-${curriculum.accent}`}>{curriculum.code}</span><p className="eyebrow">{curriculum.name}</p><h1>{item.name}</h1><p>{item.description || curriculum.description}</p></header>
     <section className="panel school-topic-panel"><div className="school-detail-section-head"><div><BookOpen size={18}/><h2>Topics & learning progress</h2></div><span>{topics.filter(({ key }) => completed.has(key)).length} / {topics.length} completed</span></div>
-      <div className="school-topic-list">{topics.map(({ topic, description, key }) => { const done = completed.has(key); return <button type="button" key={key} className={`school-topic-row ${done ? 'is-complete' : ''}`} disabled={saving === key} onClick={() => toggle(key)}><span>{done ? <CheckCircle2 size={19}/> : <Circle size={19}/>}</span><span><b>{topic}</b><small>{description || (done ? 'Completed · click to reset' : 'Mark complete when you finish this topic.')}</small></span></button>; })}</div>
+      <div className="school-topic-list">{topics.map(({ topic, description, moduleId, key }) => { const done = completed.has(key); return <button type="button" key={key} className={`school-topic-row ${done ? 'is-complete' : ''}`} disabled={saving === key} onClick={() => toggle(key, moduleId)}><span>{done ? <CheckCircle2 size={19}/> : <Circle size={19}/>}</span><span><b>{topic}</b><small>{description || (done ? 'Completed · click to reset' : 'Mark complete when you finish this topic.')}</small></span></button>; })}</div>
     </section>
     <div className="school-extra-grid">
       <section className="panel"><div className="school-detail-section-head"><div><ExternalLink size={17}/><h2>Learning resources</h2></div></div><div className="school-resource-list">{resources.map(resource => <a key={resource.url} href={resource.url} target="_blank" rel="noreferrer"><b>{resource.title}</b><span>{resource.description}</span><small>Open resource ↗</small></a>)}</div></section>

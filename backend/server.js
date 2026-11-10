@@ -14,7 +14,7 @@ const projectRoot = path.resolve(__dirname, '..');
 const frontendRoot = path.join(projectRoot, 'frontend');
 const frontendDist = path.join(frontendRoot, 'dist');
 const isProduction = process.env.NODE_ENV === 'production';
-let port = Number(process.env.PORT || 5000);
+let port = Number(process.env.PORT || 5001);
 let viteServer = null;
 let stopping = false;
 
