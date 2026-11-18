@@ -82,6 +82,8 @@ export default function App() {
       <Routes>
         <Route path="/admin/*" element={<AdminApp/>}/>
         <Route path="/login" element={<Login/>}/>
+        <Route path="/signin" element={<Login standalone/>}/>
+        <Route path="/signup" element={<Login standalone initialMode="signup"/>}/>
         <Route path="/" element={<Navigate to="/login" replace/>}/>
         <Route path="/*" element={<UserProtectedWorkspace/>}/>
       </Routes>

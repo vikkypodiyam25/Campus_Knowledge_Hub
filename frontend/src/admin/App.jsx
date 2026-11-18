@@ -11,6 +11,7 @@ const Discussions = lazy(() => import('./features/discussions/pages/Discussions'
 const Sessions = lazy(() => import('./features/sessions/pages/Sessions'));
 const ContentOverview = lazy(() => import('./features/dashboard/pages/ContentOverview'));
 const AssignmentSubmissions = lazy(() => import('./features/assignments/pages/AssignmentSubmissions'));
+const Settings = lazy(() => import('./features/settings/pages/Settings'));
 
 export default function App() {
   return <Suspense fallback={<div className="min-h-screen grid place-items-center text-sm text-slate-500">Loading admin panel…</div>}>
@@ -28,7 +29,7 @@ export default function App() {
         <Route path="categories" element={<ContentOverview mode="store" />} />
         <Route path="notifications" element={<ContentOverview mode="content" />} />
         <Route path="analytics" element={<ContentOverview mode="content" />} />
-        <Route path="settings" element={<ContentOverview mode="jobs" />} />
+        <Route path="settings" element={<Settings />} />
       </Route>
       <Route path="*" element={<Navigate to="/admin/dashboard" replace />} />
     </Routes>

@@ -74,13 +74,13 @@ export const StatsCards = ({ stats }) => {
   ];
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+    <div className="admin-dashboard-stats grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
       {cards.map((card, idx) => {
         const Icon = card.icon;
         return (
           <div
             key={idx}
-            className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-card hover:shadow-card-hover transition-all duration-200 dark:border-slate-800 dark:bg-slate-900 flex flex-col justify-between"
+            className={`admin-dashboard-stat admin-dashboard-stat-${card.color} rounded-2xl border border-slate-200/80 bg-white p-4 shadow-card hover:shadow-card-hover transition-all duration-200 dark:border-slate-800 dark:bg-slate-900 flex flex-col justify-between`}
           >
             <div className="flex items-center justify-between">
               <span className="text-xs font-medium text-slate-500 dark:text-slate-400 line-clamp-1">

@@ -20,9 +20,9 @@ export const OverviewChart = ({ growthData = [], distributionData = [], weeklyDa
   const hasAnalytics = growthData.length || weeklyData.length;
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div className="admin-dashboard-analytics grid grid-cols-1 lg:grid-cols-3 gap-6">
       {/* Primary Analytics Card (2 cols) */}
-      <div className="lg:col-span-2 rounded-2xl border border-slate-200/80 bg-white p-5 shadow-card dark:border-slate-800 dark:bg-slate-900">
+      <div className="admin-dashboard-chart-card lg:col-span-2 rounded-2xl border border-slate-200/80 bg-white p-5 shadow-card dark:border-slate-800 dark:bg-slate-900">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
           <div>
             <h3 className="text-base font-semibold text-slate-900 dark:text-white">
@@ -38,6 +38,7 @@ export const OverviewChart = ({ growthData = [], distributionData = [], weeklyDa
             <button
               type="button"
               onClick={() => setActiveTab('growth')}
+              aria-pressed={activeTab === 'growth'}
               className={`rounded-lg px-3 py-1 text-xs font-semibold transition-all ${
                 activeTab === 'growth'
                   ? 'bg-white text-indigo-600 shadow-sm dark:bg-slate-700 dark:text-white'
@@ -49,6 +50,7 @@ export const OverviewChart = ({ growthData = [], distributionData = [], weeklyDa
             <button
               type="button"
               onClick={() => setActiveTab('qa')}
+              aria-pressed={activeTab === 'qa'}
               className={`rounded-lg px-3 py-1 text-xs font-semibold transition-all ${
                 activeTab === 'qa'
                   ? 'bg-white text-indigo-600 shadow-sm dark:bg-slate-700 dark:text-white'
@@ -60,6 +62,7 @@ export const OverviewChart = ({ growthData = [], distributionData = [], weeklyDa
             <button
               type="button"
               onClick={() => setActiveTab('weekly')}
+              aria-pressed={activeTab === 'weekly'}
               className={`rounded-lg px-3 py-1 text-xs font-semibold transition-all ${
                 activeTab === 'weekly'
                   ? 'bg-white text-indigo-600 shadow-sm dark:bg-slate-700 dark:text-white'
@@ -80,8 +83,8 @@ export const OverviewChart = ({ growthData = [], distributionData = [], weeklyDa
               <AreaChart data={growthData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                 <defs>
                   <linearGradient id="studentGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#4f46e5" stopOpacity={0.4} />
-                    <stop offset="95%" stopColor="#4f46e5" stopOpacity={0.0} />
+                    <stop offset="5%" stopColor="#19a88e" stopOpacity={0.38} />
+                    <stop offset="95%" stopColor="#19a88e" stopOpacity={0.0} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" opacity={0.6} />
@@ -100,7 +103,7 @@ export const OverviewChart = ({ growthData = [], distributionData = [], weeklyDa
                   type="monotone"
                   dataKey="students"
                   name="Registered Students"
-                  stroke="#4f46e5"
+                  stroke="#159b87"
                   strokeWidth={2.5}
                   fillOpacity={1}
                   fill="url(#studentGradient)"
@@ -125,8 +128,8 @@ export const OverviewChart = ({ growthData = [], distributionData = [], weeklyDa
                   }}
                 />
                 <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} />
-                <Bar dataKey="questions" name="Questions Asked" fill="#6366f1" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="discussions" name="Discussions Started" fill="#a855f7" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="questions" name="Questions Asked" fill="#3b82a0" radius={[5, 5, 0, 0]} />
+                <Bar dataKey="discussions" name="Discussions Started" fill="#8b74dc" radius={[5, 5, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           )}
@@ -147,8 +150,8 @@ export const OverviewChart = ({ growthData = [], distributionData = [], weeklyDa
                   }}
                 />
                 <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} />
-                <Bar dataKey="answers" name="Answers Provided" fill="#10b981" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="questions" name="Doubts Logged" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="answers" name="Answers Provided" fill="#1aa889" radius={[5, 5, 0, 0]} />
+                <Bar dataKey="questions" name="Doubts Logged" fill="#4f86c6" radius={[5, 5, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           )}
@@ -157,7 +160,7 @@ export const OverviewChart = ({ growthData = [], distributionData = [], weeklyDa
       </div>
 
       {/* User Distribution Pie Chart (1 col) */}
-      <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-card dark:border-slate-800 dark:bg-slate-900 flex flex-col justify-between">
+      <div className="admin-dashboard-distribution rounded-2xl border border-slate-200/80 bg-white p-5 shadow-card dark:border-slate-800 dark:bg-slate-900 flex flex-col justify-between">
         <div>
           <h3 className="text-base font-semibold text-slate-900 dark:text-white">
             Student Distribution

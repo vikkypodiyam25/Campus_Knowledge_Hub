@@ -37,6 +37,12 @@ export default function SessionCard({ s }) {
   const { mutate, notify } = useApp();
   const date = getSessionDate(s.date);
   const time = formatSessionTime(s.time);
+  const meetUrl = (() => {
+    try {
+      const url = new URL(s.link || '');
+      return url.protocol === 'https:' && url.hostname === 'meet.google.com' && !url.pathname.endsWith('/abc-defg-hij') ? url.href : '';
+    } catch { return ''; }
+  })();
   return <article className="content-card session-card">
     <div className="session-date" aria-label={date.label}><b>{date.day}</b><span>{date.month}</span></div>
     <div className="session-main">
@@ -50,6 +56,6 @@ export default function SessionCard({ s }) {
         <span>{s.duration} min</span>
       </div>
     </div>
-    <Button kind={s.registered ? 'outline' : 'primary'} onClick={async () => { if (!s.registered) { try { await mutate('sessions', 'register', { id: s.id }); notify('You are registered!'); } catch (error) { notify(error.message); } } else { window.open(s.link, '_blank', 'noopener'); notify('Opening demo Meet link'); } }}>{s.registered ? 'Join session' : 'Register'} <ArrowRight size={15}/></Button>
+    <Button kind={s.registered ? 'outline' : 'primary'} disabled={Boolean(s.registered && !meetUrl)} title={s.registered && !meetUrl ? 'The host has not added a real Google Meet link yet.' : undefined} onClick={async () => { if (!s.registered) { try { await mutate('sessions', 'register', { id: s.id }); notify('You are registered!'); } catch (error) { notify(error.message); } } else if (meetUrl) { window.open(meetUrl, '_blank', 'noopener,noreferrer'); } }}>{s.registered ? (meetUrl ? 'Join session' : 'Meet link pending') : 'Register'} <ArrowRight size={15}/></Button>
   </article>;
 }

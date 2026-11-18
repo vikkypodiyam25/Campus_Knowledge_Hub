@@ -8,6 +8,7 @@
 :root { --bg: #f4f7f8; --surface: #ffffff; --text: #172b35; --line: #e4ebed; --purple: #087f78; --shadow: 0 8px 24px rgb(25 56 67 / 5%); }
 body { background: radial-gradient(ellipse at 88% 0%, #dff4ed 0, transparent 29%), #f4f7f8; }
 .sidebar { width: 258px; padding: 24px 17px 14px; border-right-color: #e5edec; box-shadow: 8px 0 30px rgb(25 56 67 / 3%); }
+.sidebar-caption { margin: 25px 7px 9px; color: #8b9da1; font-size: 9px; font-weight: 850; letter-spacing: 1.35px; }
 .brand { font-size: 20px; letter-spacing: -.9px; }
 .brand-mark { background: linear-gradient(145deg, #19a792, #087f78); box-shadow: 0 6px 15px #087f7835; }
 .brand-accent { color: #087f78; }

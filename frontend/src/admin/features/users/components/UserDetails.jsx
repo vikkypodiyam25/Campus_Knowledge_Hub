@@ -12,7 +12,20 @@ import {
   Video,
   Award,
   Edit,
+  Link2,
+  ExternalLink,
 } from 'lucide-react';
+
+function safeProfileUrl(value, kind) {
+  let input = String(value || '').trim();
+  if (!input) return '';
+  if (kind === 'github' && !input.includes('.') && !input.includes('/')) input = `github.com/${input}`;
+  if (kind === 'linkedin' && !input.includes('.') && !input.includes('/')) input = `linkedin.com/in/${input}`;
+  try {
+    const url = new URL(/^https?:\/\//i.test(input) ? input : `https://${input}`);
+    return ['http:', 'https:'].includes(url.protocol) ? url.href : '';
+  } catch { return ''; }
+}
 
 export const UserDetails = ({
   isOpen,
@@ -79,6 +92,11 @@ export const UserDetails = ({
             <p className="text-xs text-slate-600 dark:text-slate-300 mt-2 leading-relaxed">
               {user.bio || 'No personal bio added.'}
             </p>
+
+            {(safeProfileUrl(user.github, 'github') || safeProfileUrl(user.linkedin, 'linkedin')) && <div className="mt-3 flex flex-wrap gap-2">
+              {safeProfileUrl(user.github, 'github') && <a href={safeProfileUrl(user.github, 'github')} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-700 hover:border-indigo-300 hover:text-indigo-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:border-indigo-500 dark:hover:text-indigo-300"><Link2 className="h-3.5 w-3.5"/>GitHub<ExternalLink className="h-3 w-3"/></a>}
+              {safeProfileUrl(user.linkedin, 'linkedin') && <a href={safeProfileUrl(user.linkedin, 'linkedin')} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-700 hover:border-indigo-300 hover:text-indigo-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:border-indigo-500 dark:hover:text-indigo-300"><Link2 className="h-3.5 w-3.5"/>LinkedIn<ExternalLink className="h-3 w-3"/></a>}
+            </div>}
 
             <div className="mt-3 flex flex-wrap items-center justify-center sm:justify-start gap-4 text-xs text-slate-500 dark:text-slate-400">
               <span className="flex items-center gap-1.5">

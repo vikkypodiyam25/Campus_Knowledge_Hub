@@ -75,7 +75,7 @@ export const Dashboard = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="admin-dashboard-page space-y-6">
       {loadError && <div role="alert" className="flex flex-col gap-3 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800 sm:flex-row sm:items-center sm:justify-between dark:border-rose-900/70 dark:bg-rose-950/40 dark:text-rose-200"><span>{loadError}</span><Button variant="secondary" size="sm" onClick={handleManualRefresh} isLoading={isRefreshing}>Retry</Button></div>}
       <section className="flex flex-wrap items-center gap-3" aria-label="Share with students">
         <span className="mr-1 text-sm font-semibold text-slate-700 dark:text-slate-200">Share with students</span>
@@ -129,7 +129,7 @@ export const Dashboard = () => {
 
       <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4" aria-label="Admin shortcuts">
         {quickLinks.map(({ label, description, path, icon: Icon, color }) => (
-          <Link key={path} to={path} className="group flex items-center gap-3 rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-indigo-200 hover:shadow-md dark:border-slate-800 dark:bg-slate-900 dark:hover:border-indigo-800">
+          <Link key={path} to={path} className="admin-dashboard-shortcut group flex items-center gap-3 rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-indigo-200 hover:shadow-md dark:border-slate-800 dark:bg-slate-900 dark:hover:border-indigo-800">
             <span className={`grid h-11 w-11 shrink-0 place-items-center rounded-xl ${color}`}><Icon className="h-5 w-5" /></span>
             <span className="min-w-0 flex-1"><span className="block truncate text-sm font-semibold text-slate-900 dark:text-white">{label}</span><span className="mt-0.5 block text-xs text-slate-500 dark:text-slate-400">{description}</span></span>
             <ArrowRight className="h-4 w-4 text-slate-400 transition group-hover:translate-x-0.5 group-hover:text-indigo-600" />

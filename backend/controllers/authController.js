@@ -29,8 +29,18 @@ async function googleLogin(req, res, requiredRole = 'student') {
   try {
     const ticket = await googleClient.verifyIdToken({ idToken, audience: clientId });
     googleUser = ticket.getPayload();
-  } catch {
-    return fail(res, 401, 'Google could not verify this sign-in. Please try again.');
+  } catch (error) {
+    // Keep provider details out of the response, but make the common setup
+    // errors actionable. In particular, this avoids disguising a wrong
+    // client ID or a temporary Google key/network failure as a bad login.
+    const message = String(error?.message || '').toLowerCase();
+    if (/audience|aud|client id/.test(message)) {
+      return fail(res, 401, 'Google sign-in configuration mismatch. Make sure frontend and backend use the same Web Client ID, then restart both servers.');
+    }
+    if (/fetch|network|timeout|certificate|socket|econn|enotfound/.test(message)) {
+      return fail(res, 503, 'Could not reach Google to verify sign-in. Check your internet connection and try again.');
+    }
+    return fail(res, 401, 'Google could not verify this sign-in. The sign-in token may have expired; try again.');
   }
   if (!googleUser?.sub || !googleUser.email || googleUser.email_verified !== true) {
     return fail(res, 401, 'A verified Google email is required to sign in.');

@@ -28,7 +28,7 @@ export const RecentActivity = ({ recentData }) => {
   } = recentData;
 
   return (
-    <div className="space-y-6">
+    <div className="admin-dashboard-activity space-y-6">
       {/* 2-Column Grid: Students & Latest Doubts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Recent Registered Students */}

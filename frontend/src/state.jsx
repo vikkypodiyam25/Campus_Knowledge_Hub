@@ -15,9 +15,9 @@ const seed = {
     { id: 3, title: 'Share a learning resource that actually helped', description: 'A great article, course or video can make a hard topic click. Drop your recommendations here.', category: 'Learning', author: 'Ishita Rao', initials: 'IR', time: 'Yesterday', likes: 41, comments: [], tags: ['resources'], saved: false }
   ],
   sessions: [
-    { id: 1, title: 'React Hooks: from basics to patterns', description: 'A friendly walkthrough of useState, useEffect and a few reusable hook patterns.', category: 'React', host: 'Meera Kapoor', initials: 'MK', date: 'Today', time: '6:30 PM', duration: 60, participants: 18, status: 'Upcoming', link: 'https://meet.google.com/abc-defg-hij', registered: false },
-    { id: 2, title: 'JavaScript interview problem solving', description: 'Practice breaking down common array and string problems together.', category: 'JavaScript', host: 'Rohan Verma', initials: 'RV', date: 'Tomorrow', time: '5:00 PM', duration: 45, participants: 12, status: 'Upcoming', link: 'https://meet.google.com/abc-defg-hij', registered: true },
-    { id: 3, title: 'MongoDB schema design clinic', description: 'Bring your data model questions and get practical feedback.', category: 'MongoDB', host: 'Aarav Sharma', initials: 'AS', date: 'Nov 8', time: '4:00 PM', duration: 50, participants: 24, status: 'Ongoing', link: 'https://meet.google.com/abc-defg-hij', registered: false }
+    { id: 1, title: 'React Hooks: from basics to patterns', description: 'A friendly walkthrough of useState, useEffect and a few reusable hook patterns.', category: 'React', host: 'Meera Kapoor', initials: 'MK', date: 'Today', time: '6:30 PM', duration: 60, participants: 18, status: 'Upcoming', link: '', registered: false },
+    { id: 2, title: 'JavaScript interview problem solving', description: 'Practice breaking down common array and string problems together.', category: 'JavaScript', host: 'Rohan Verma', initials: 'RV', date: 'Tomorrow', time: '5:00 PM', duration: 45, participants: 12, status: 'Upcoming', link: '', registered: true },
+    { id: 3, title: 'MongoDB schema design clinic', description: 'Bring your data model questions and get practical feedback.', category: 'MongoDB', host: 'Aarav Sharma', initials: 'AS', date: 'Nov 8', time: '4:00 PM', duration: 50, participants: 24, status: 'Ongoing', link: '', registered: false }
   ],
   notifications: [
     { id: 1, title: 'Meera answered your question', detail: 'A practical note on managing shared React state.', time: '10 min ago', read: false, icon: 'message' },

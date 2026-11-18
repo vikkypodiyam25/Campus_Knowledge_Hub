@@ -55,7 +55,7 @@ async function handle(req, res, url) {
   if (req.method === 'GET' && url.pathname === '/api/admin/dashboard') {
       const users = (await User.find({}).sort({ created_at: -1 }).lean()).map(user => {
       const profile = user.profile || {};
-      return { id: user.id, name: user.name, username: user.username, email: user.email, role: 'Student', status: user.status === 'active' ? 'Active' : 'Suspended', avatar: profile.avatar || '', batch: 'New learner', joinedDate: user.created_at, bio: profile.bio || '', skills: profile.skills || [], stats: { questions: 0, answers: 0, discussions: 0, sessionsJoined: 0 } };
+      return { id: user.id, name: user.name, username: user.username, email: user.email, role: 'Student', status: user.status === 'active' ? 'Active' : 'Suspended', avatar: profile.avatar || '', batch: 'New learner', joinedDate: user.created_at, bio: profile.bio || '', skills: profile.skills || [], github: profile.github || '', linkedin: profile.linkedin || '', stats: { questions: 0, answers: 0, discussions: 0, sessionsJoined: 0 } };
     });
     const storage = await service.adminStorageObject();
     const questions = Array.isArray(storage.learnconnect_questions_data) ? storage.learnconnect_questions_data.filter(item => item?.author?.email || item?.author?.id) : [];
@@ -139,7 +139,7 @@ async function handle(req, res, url) {
 async function adminUsers() {
   return (await User.find({}).sort({ created_at: -1 }).lean()).map(user => {
     const profile = user.profile || {};
-    return { id: user.id, name: user.name, username: user.username, email: user.email, role: 'Student', status: user.status === 'active' ? 'Active' : 'Suspended', avatar: profile.avatar || '', batch: 'New learner', joinedDate: user.created_at, bio: profile.bio || '', skills: profile.skills || [], stats: { questions: 0, answers: 0, discussions: 0, sessionsJoined: 0 } };
+    return { id: user.id, name: user.name, username: user.username, email: user.email, role: 'Student', status: user.status === 'active' ? 'Active' : 'Suspended', avatar: profile.avatar || '', batch: 'New learner', joinedDate: user.created_at, bio: profile.bio || '', skills: profile.skills || [], github: profile.github || '', linkedin: profile.linkedin || '', stats: { questions: 0, answers: 0, discussions: 0, sessionsJoined: 0 } };
   });
 }
 
