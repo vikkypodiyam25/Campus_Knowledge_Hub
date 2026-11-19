@@ -1,8 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import React, { useContext, useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { GoogleLogin } from '@react-oauth/google';
 import { ArrowUpRight, ArrowRight, BookOpen, BriefcaseBusiness, Code2, Eye, EyeOff, Landmark, LockKeyhole, Mail, ShieldCheck, Sparkles, UserRound, UsersRound, MessageCircle, CalendarDays, CheckCircle2, Compass, GraduationCap, Clock3, Flame, CircleHelp, Play, Pause, Radio, Star, Layers3, Search, X, Menu, Moon, Sun } from 'lucide-react';
 import api from '../api.js';
+import GoogleAuthContext from '../googleAuthContext.js';
 import { INITIAL_APP_STATE, useApp } from '../state.jsx';
 import { CURRICULA } from '../data/curricula.js';
 import './Login.css';
@@ -90,7 +91,7 @@ export default function Login({ standalone = false, initialMode = 'login' }) {
   const isSignup = mode === 'signup';
   const isForgot = mode === 'forgot';
   const isLanding = !standalone && !isForgot;
-  const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+  const { clientId: googleClientId, loading: googleConfigLoading } = useContext(GoogleAuthContext);
   const topicResults = Object.values(CURRICULA).flatMap(school => school.categories.map(topic => ({ topic, schoolId: school.id, schoolName: school.shortName, schoolCode: school.code })))
     .filter(item => !topicQuery.trim() || `${item.topic} ${item.schoolName} ${item.schoolCode}`.toLowerCase().includes(topicQuery.trim().toLowerCase()))
     .slice(0, topicQuery.trim() ? 8 : 3);
@@ -366,8 +367,8 @@ export default function Login({ standalone = false, initialMode = 'login' }) {
           })}</div>
           {selectedSchool && <p className="login-school-selected"><BookOpen size={13}/> {CURRICULA[selectedSchool].name} curriculum selected</p>}
         </section>}
-        {!isForgot && googleClientId && <div className="google-auth">{isSubmitting ? <p role="status">Finishing secure sign-in…</p> : <GoogleLogin onSuccess={handleGoogleSuccess} onError={() => setError('Google sign-in was cancelled or could not be completed.')} text="continue_with" shape="pill" width="280" useOneTap={false}/>}<p>Secure sign-in with your Google account</p></div>}
-        {!isForgot && !googleClientId && <div className="google-auth"><button className="google-unconfigured" type="button" disabled><b>G</b>Continue with Google</button><p>Add your Google Web Client ID to frontend/.env to enable Google sign-in.</p></div>}
+        {!isForgot && googleClientId && <div className="google-auth">{isSubmitting ? <p role="status">Finishing secure sign-in…</p> : <GoogleLogin onSuccess={handleGoogleSuccess} onError={() => setError('Google sign-in could not start. Check that the Web OAuth client is active and this site origin is authorized in Google Cloud Console.')} text="continue_with" shape="pill" width="280" useOneTap={false}/>}<p>Secure sign-in with your Google account</p></div>}
+        {!isForgot && !googleClientId && <div className="google-auth"><button className="google-unconfigured" type="button" disabled><b>G</b>{googleConfigLoading ? 'Connecting to Google…' : 'Continue with Google'}</button><p>{googleConfigLoading ? 'Checking the server Google sign-in setup.' : 'Google sign-in is not configured on this server. Set GOOGLE_CLIENT_ID in backend/.env and restart the server.'}</p></div>}
         <form className="login-form" onSubmit={handleSubmit} autoComplete="off">
           {isSignup && <label className="login-field"><span className="sr-only">Full name</span><UserRound size={16}/><input type="text" autoComplete="name" value={name} onChange={event => setName(event.target.value)} placeholder="Full name" required/></label>}
           <label className="login-field"><span className="sr-only">Email address</span><Mail size={16}/><input type="email" name="learnconnect-email-entry" autoComplete="off" readOnly={!fieldsEnabled} onFocus={() => setFieldsEnabled(true)} value={email} onChange={event => setEmail(event.target.value)} placeholder="Email address" required/></label>

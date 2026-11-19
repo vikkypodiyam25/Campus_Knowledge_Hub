@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useContext, useState, useEffect } from 'react';
 import Modal from '../../../components/common/Modal';
 import Input from '../../../components/common/Input';
 import Select from '../../../components/common/Select';
@@ -6,8 +6,7 @@ import Button from '../../../components/common/Button';
 import { SESSION_STATUS, DEFAULT_CATEGORIES } from '../../../utils/constants';
 import { validateRequired } from '../../../utils/validators';
 import GoogleMeetLinkButton from '../../../../components/common/GoogleMeetLinkButton.jsx';
-
-const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID?.trim();
+import GoogleAuthContext from '../../../../googleAuthContext.js';
 
 export const SessionEditModal = ({
   isOpen,
@@ -15,6 +14,7 @@ export const SessionEditModal = ({
   session,
   onSave,
 }) => {
+  const { clientId: googleClientId } = useContext(GoogleAuthContext);
   const [formData, setFormData] = useState({
     title: '',
     category: 'React.js',
